@@ -42,8 +42,7 @@ fun AppCard(
     showWishlistHeart: Boolean = false,
     isWishlisted: Boolean = false,
     onWishlistClick: (() -> Unit)? = null,
-    showVisitedBadge: Boolean = false,
-    statusLabel: String? = null
+    showVisitedBadge: Boolean = false
 ) {
     Card(
         onClick = onClick,
@@ -107,30 +106,6 @@ fun AppCard(
                         .background(Color.White)
                         .padding(2.dp)
                 )
-            }
-
-            if (!statusLabel.isNullOrBlank()) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(12.dp)
-                        .background(
-                            when (statusLabel.lowercase()) {
-                                "approved" -> Color(0xFF2E7D32)
-                                "rejected" -> Color(0xFFC62828)
-                                else -> Color(0xFFF9A825)
-                            },
-                            RoundedCornerShape(8.dp)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = statusLabel.replaceFirstChar { it.uppercase() },
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
 
             Column(

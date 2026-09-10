@@ -188,20 +188,11 @@ fun AddPlaceScreen(
                                 location = location.trim().ifBlank { null },
                                 imageUrl = imageUrl
                             )
-                            val res = if (tokenManager.isAdmin) {
-                                RetrofitInstance.adminApi.addPlace(
-                                    bearer = "Bearer $token",
-                                    body = body
-                                )
-                            } else {
-                                RetrofitInstance.placeApi.addPlace(
-                                    bearer = "Bearer $token",
-                                    body = body
-                                )
-                            }
-                            successMsg = res.message
-                                ?: if (tokenManager.isAdmin) "Place published"
-                                else "Place submitted for approval"
+                            val res = RetrofitInstance.adminApi.addPlace(
+                                bearer = "Bearer $token",
+                                body = body
+                            )
+                            successMsg = res.message ?: "Place published"
                             // Go straight home (caller refreshes list)
                             onSubmitted()
                         } catch (e: Exception) {

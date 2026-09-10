@@ -32,12 +32,8 @@ import com.example.travira.screens.admin.AdminDashboardScreen
 import com.example.travira.screens.ai.AIChatScreen
 import com.example.travira.screens.auth.LoginScreen
 import com.example.travira.screens.home.HomeScreen
-import com.example.travira.screens.places.AddPlaceScreen
 import com.example.travira.screens.places.EditPlaceScreen
 import com.example.travira.screens.places.PlaceScreen
-import com.example.travira.screens.profile.ContributionScreen
-import com.example.travira.screens.profile.EditProfileScreen
-import com.example.travira.screens.profile.NotificationsScreen
 import com.example.travira.screens.profile.ProfileScreen
 import com.example.travira.screens.profile.ProfileSection
 import com.example.travira.screens.profile.VisitedPlacesScreen
@@ -72,7 +68,7 @@ class MainActivity : ComponentActivity() {
 
 /** What the user was trying to do before being sent to login */
 enum class PendingAction {
-    NONE, ADD_PLACE, AI_CHAT, WISHLIST
+    NONE, AI_CHAT, WISHLIST
 }
 
 @Composable
@@ -127,7 +123,6 @@ fun TraviraApp(
 
     var showLogin by remember { mutableStateOf(false) }
     var showAdmin by remember { mutableStateOf(false) }
-    var showAddPlace by remember { mutableStateOf(false) }
     var editingPlace by remember { mutableStateOf<Place?>(null) }
     var pendingAction by remember { mutableStateOf(PendingAction.NONE) }
     var profileSection by remember { mutableStateOf<ProfileSection?>(null) }
@@ -187,7 +182,6 @@ fun TraviraApp(
     fun requireAuth(action: PendingAction) {
         if (tokenManager.isLoggedIn) {
             when (action) {
-                PendingAction.ADD_PLACE -> showAddPlace = true
                 PendingAction.AI_CHAT -> selectedIndex = 1
                 else -> {}
             }
@@ -202,7 +196,6 @@ fun TraviraApp(
         showLogin = false
         // Admins stay on the main app; they open dashboard via bottom Admin tab
         when (pendingAction) {
-            PendingAction.ADD_PLACE -> showAddPlace = true
             PendingAction.AI_CHAT -> selectedIndex = 1
             else -> {}
         }
@@ -243,31 +236,13 @@ fun TraviraApp(
             )
         }
 
-        showAddPlace -> {
-            BackHandler { showAddPlace = false }
-            AddPlaceScreen(
-                tokenManager = tokenManager,
-                onBack = { showAddPlace = false },
-                onSubmitted = {
-                    showAddPlace = false
-                    selectedIndex = 0
-                    refreshTrigger++
-                    refreshUser()
-                }
-            )
-        }
 
         editingPlace != null -> {
             val placeBeingEdited = editingPlace!!
-            val ownerId = placeBeingEdited.addedById
-            val isOwner =
-                !ownerId.isNullOrBlank() && ownerId == (currentUser?.userId ?: tokenManager.userId)
-            val isAdminEdit = tokenManager.isAdmin && !isOwner
             BackHandler { editingPlace = null }
             EditPlaceScreen(
                 place = placeBeingEdited,
                 tokenManager = tokenManager,
-                isAdminEdit = isAdminEdit,
                 onBack = { editingPlace = null },
                 onSaved = { updated ->
                     editingPlace = null
@@ -302,20 +277,6 @@ fun TraviraApp(
             )
         }
 
-        profileSection == ProfileSection.EDIT_PROFILE -> {
-            BackHandler { profileSection = null }
-            EditProfileScreen(
-                tokenManager = tokenManager,
-                user = currentUser,
-                onBack = { profileSection = null },
-                onSaved = { updated ->
-                    currentUser = updated
-                    profileSection = null
-                    selectedIndex = 2
-                    refreshUser()
-                }
-            )
-        }
 
         profileSection == ProfileSection.WISHLIST -> {
             BackHandler { profileSection = null }
@@ -325,15 +286,6 @@ fun TraviraApp(
                     profileSection = null
                     refreshUser()
                 },
-                onPlaceClick = { selectedPlace = it }
-            )
-        }
-
-        profileSection == ProfileSection.CONTRIBUTION -> {
-            BackHandler { profileSection = null }
-            ContributionScreen(
-                tokenManager = tokenManager,
-                onBack = { profileSection = null },
                 onPlaceClick = { selectedPlace = it }
             )
         }
@@ -350,16 +302,6 @@ fun TraviraApp(
             )
         }
 
-        profileSection == ProfileSection.NOTIFICATIONS -> {
-            BackHandler { profileSection = null }
-            NotificationsScreen(
-                tokenManager = tokenManager,
-                onBack = {
-                    profileSection = null
-                    refreshUser()
-                }
-            )
-        }
 
         else -> {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -371,7 +313,7 @@ fun TraviraApp(
                             errorMessage = errorMessage,
                             onPlaceClick = { selectedPlace = it },
                             onRetry = { refreshTrigger++ },
-                            onAddPlaceClick = { requireAuth(PendingAction.ADD_PLACE) },
+                            onRefresh = { refreshTrigger++ },
                             userName = currentUser?.name
                                 ?: tokenManager.userName
                                 ?: if (isLoggedIn) "Traveler" else "Guest",

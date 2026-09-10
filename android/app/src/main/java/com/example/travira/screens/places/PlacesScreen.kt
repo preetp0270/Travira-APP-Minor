@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Person
@@ -108,7 +107,8 @@ fun PlaceScreen(
         !uid.isNullOrBlank() && place.addedById.isNotBlank() && place.addedById == uid
     }
     val isAdmin = tokenManager?.isAdmin == true
-    val canManage = isOwner || isAdmin
+    // Only admins can edit / delete places
+    val canManage = isAdmin
 
     fun authOr(action: suspend (String) -> Unit) {
         val token = tokenManager?.accessToken
@@ -143,31 +143,13 @@ fun PlaceScreen(
         }
     }
 
-    fun sharePlace() {
-        val text = buildString {
-            append(place.name)
-            if (place.locationLine.isNotBlank()) append(" · ${place.locationLine}")
-            append("\n")
-            append(place.shortDescription ?: place.description ?: "Check out this place on Travira")
-        }
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, place.name)
-            putExtra(Intent.EXTRA_TEXT, text)
-        }
-        context.startActivity(Intent.createChooser(intent, "Share place"))
-    }
 
     fun performDelete() {
         val token = tokenManager?.accessToken ?: return
         deleting = true
         scope.launch {
             try {
-                if (isAdmin && !isOwner) {
-                    RetrofitInstance.adminApi.deletePlace("Bearer $token", place._id)
-                } else {
-                    RetrofitInstance.placeApi.deletePlace("Bearer $token", place._id)
-                }
+                RetrofitInstance.adminApi.deletePlace("Bearer $token", place._id)
                 actionMsg = "Place deleted"
                 onDeleted?.invoke()
             } catch (e: Exception) {
@@ -185,10 +167,8 @@ fun PlaceScreen(
             title = { Text("Delete place?") },
             text = {
                 Text(
-                    if (isAdmin && !isOwner)
-                        "This will permanently remove \"${place.name}\" and notify the owner."
-                    else
-                        "This will permanently remove \"${place.name}\"."
+                    "This will permanently remove \"${place.name}\"."
+
                 )
             },
             confirmButton = {
@@ -261,9 +241,6 @@ fun PlaceScreen(
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CircleIconButton(onClick = { sharePlace() }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.Black)
-                        }
                         if (canManage) {
                             Box {
                                 CircleIconButton(onClick = { menuExpanded = true }) {
@@ -373,18 +350,6 @@ fun PlaceScreen(
                             icon = null,
                             label = "Reviews",
                             value = liveRatingsCount.toString()
-                        )
-                    }
-                    InfoPill(
-                        icon = { Icon(Icons.Outlined.Person, null, tint = Color(0xFF5E35B1), modifier = Modifier.size(18.dp)) },
-                        label = "Added by",
-                        value = place.addedByName
-                    )
-                    if (!place.approvalStatus.isNullOrBlank() && canManage) {
-                        InfoPill(
-                            icon = null,
-                            label = "Status",
-                            value = place.approvalStatus.replaceFirstChar { it.uppercase() }
                         )
                     }
                 }
@@ -570,28 +535,6 @@ fun PlaceScreen(
                     color = Color(0xFF4A5568),
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
-
-                if (!place.adminFeedback.isNullOrBlank() && canManage) {
-                    Spacer(Modifier.height(16.dp))
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1))
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text(
-                                "Feedback",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp,
-                                color = Color(0xFFF57F17)
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(place.adminFeedback, fontSize = 14.sp, color = Color(0xFF5D4037))
-                        }
-                    }
-                }
 
                 Spacer(Modifier.height(24.dp))
 

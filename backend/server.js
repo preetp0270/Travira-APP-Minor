@@ -25,19 +25,14 @@ async function seedMainAdmin() {
         email,
         password: hashed,
         role: "superadmin",
-        adminStatus: "approved",
         location: "India",
         phone: ""
       });
-      console.log("✅ Main admin created: preet@travira.app / 1234");
-    } else {
-      // Ensure superadmin role
-      if (user.role !== "superadmin") {
-        user.role = "superadmin";
-        user.adminStatus = "approved";
-        await user.save();
-        console.log("✅ Main admin role upgraded to superadmin");
-      }
+      console.log("✅ Main admin created");
+    } else if (user.role !== "superadmin") {
+      user.role = "superadmin";
+      await user.save();
+      console.log("✅ Main admin role upgraded to superadmin");
     }
   } catch (e) {
     console.error("seedMainAdmin error:", e.message);

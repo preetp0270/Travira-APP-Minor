@@ -23,27 +23,6 @@ interface AdminApi {
         @Path("id") id: String
     ): AdminPlaceDetailResponse
 
-    @PUT("api/admin/places/{id}/approve")
-    suspend fun approvePlace(
-        @Header("Authorization") bearer: String,
-        @Path("id") id: String,
-        @Body body: Map<String, String>
-    ): SimpleMessageResponse
-
-    @PUT("api/admin/places/{id}/reject")
-    suspend fun rejectPlace(
-        @Header("Authorization") bearer: String,
-        @Path("id") id: String,
-        @Body body: Map<String, String>
-    ): SimpleMessageResponse
-
-    @PUT("api/admin/places/{id}/status")
-    suspend fun setPlaceStatus(
-        @Header("Authorization") bearer: String,
-        @Path("id") id: String,
-        @Body body: StatusBody
-    ): SimpleMessageResponse
-
     @DELETE("api/admin/places/{id}")
     suspend fun deletePlace(
         @Header("Authorization") bearer: String,
@@ -89,24 +68,6 @@ interface AdminApi {
 
     @DELETE("api/admin/users/{id}")
     suspend fun deleteUser(
-        @Header("Authorization") bearer: String,
-        @Path("id") id: String
-    ): SimpleMessageResponse
-
-    @GET("api/admin/admins")
-    suspend fun getAdmins(
-        @Header("Authorization") bearer: String
-    ): AdminListResponse
-
-    @PUT("api/admin/admins/{id}/status")
-    suspend fun setAdminStatus(
-        @Header("Authorization") bearer: String,
-        @Path("id") id: String,
-        @Body body: StatusBody
-    ): SimpleMessageResponse
-
-    @DELETE("api/admin/admins/{id}")
-    suspend fun deleteAdmin(
         @Header("Authorization") bearer: String,
         @Path("id") id: String
     ): SimpleMessageResponse

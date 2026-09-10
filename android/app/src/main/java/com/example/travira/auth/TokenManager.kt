@@ -45,9 +45,6 @@ class TokenManager(context: Context) {
             return r == "admin" || r == "superadmin"
         }
 
-    val isSuperAdmin: Boolean
-        get() = userRole == "superadmin"
-
     fun saveSession(
         accessToken: String,
         refreshToken: String,

@@ -2,20 +2,12 @@ const Place = require("../models/place");
 const User = require("../models/user");
 if (process.env.NODE_ENV !== "production") require("dotenv").config();
 
-
-// ================= Get Approved Places =================
+// ================= Get Places (public feed) =================
+// All places are admin-managed; no user upload / approval queue.
 
 exports.getPlaces = async (req, res) => {
   try {
-    // Public home feed: approved places + legacy docs that predate approvalStatus
-    const places = await Place.find({
-      $or: [
-        { approvalStatus: "approved" },
-        { approvalStatus: { $exists: false } },
-        { approvalStatus: null },
-        { approvalStatus: "" }
-      ]
-    })
+    const places = await Place.find({})
       .populate("addedBy", "name email")
       .sort({ createdAt: -1 })
       .lean();
@@ -37,25 +29,11 @@ exports.getPlaces = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-// ================= Get Single Approved Place =================
+// ================= Get Single Place =================
 
 exports.getPlaceById = async (req, res) => {
   try {
-    const place = await Place.findOne({
-      _id: req.params.id,
-      $or: [
-        { approvalStatus: "approved" },
-        { approvalStatus: { $exists: false } },
-        { approvalStatus: null },
-        { approvalStatus: "" }
-      ]
-    })
+    const place = await Place.findById(req.params.id)
       .populate("addedBy", "name email")
       .lean();
 
@@ -81,49 +59,17 @@ exports.getPlaceById = async (req, res) => {
   }
 };
 
+// ================= My Added Places (legacy / profile) =================
 
-
-
-
-
-
-// ================= Add Place =================
-// Admins / superadmins skip approval and go live immediately.
-
-exports.addPlace = async (req, res) => {
+exports.getMyPlaces = async (req, res) => {
   try {
-    const actor = await User.findById(req.user.id).select("role email");
-    const isAdminActor =
-      actor &&
-      (actor.role === "admin" ||
-        actor.role === "superadmin" ||
-        actor.email === process.env.ROOT_ADMIN_EMAIL);
-
-    const place = new Place({
-      ...req.body,
-      addedBy: req.user.id,
-      approvalStatus: isAdminActor ? "approved" : "pending"
-    });
-
-
-
-    await place.save();
-
-    await User.findByIdAndUpdate(req.user.id, {
-      $push: { addedPlaces: place._id }
-    });
-
-    const populated = await Place.findById(place._id).populate(
-      "addedBy",
-      "name email"
-    );
+    const places = await Place.find({
+      addedBy: req.user.id
+    }).populate("addedBy", "name email");
 
     res.json({
       success: true,
-      message: isAdminActor
-        ? "Place published"
-        : "Place submitted for approval",
-      place: populated
+      places
     });
   } catch (error) {
     res.status(500).json({
@@ -132,328 +78,58 @@ exports.addPlace = async (req, res) => {
   }
 };
 
+// ================= Wishlist =================
 
-
-
-
-
-
-
-
-// ================= My Added Places =================
-
-
-exports.getMyPlaces = async(req,res)=>{
-
-try{
-
-
-const places = await Place.find({
-  addedBy: req.user.id
-}).populate("addedBy", "name email");
-
-res.json({
-  success: true,
-  places
-});
-
-
-
-}catch(error){
-
-res.status(500).json({
-
-message:error.message
-
-});
-
-}
-
-};
-
-
-
-
-
-
-
-
-// ================= Update Place (owner) =================
-// When the owner edits, place goes back to pending and all admins get a notification.
-
-exports.updatePlace = async (req, res) => {
+exports.addWishlist = async (req, res) => {
   try {
-    const place = await Place.findById(req.params.id);
+    const user = await User.findById(req.user.id);
 
-    if (!place) {
-      return res.status(404).json({ message: "Place not found" });
+    if (user.wishlist.includes(req.params.id)) {
+      return res.json({
+        message: "Already in wishlist"
+      });
     }
 
-    if (place.addedBy.toString() !== req.user.id) {
-      return res.status(403).json({ message: "You cannot update this place" });
-    }
-
-    const feedbackNote =
-      typeof req.body.editNote === "string" ? req.body.editNote.trim() : "";
-
-    const { editNote, ...fields } = req.body;
-
-    const updated = await Place.findByIdAndUpdate(
-      req.params.id,
-      {
-        ...fields,
-        approvalStatus: "pending",
-        adminFeedback: feedbackNote || ""
-      },
-      { new: true }
-    ).populate("addedBy", "name email");
-
-    // Notify all admins / superadmins that a user edited a place
-    const admins = await User.find({
-      role: { $in: ["admin", "superadmin"] }
-    }).select("_id");
-
-    const title = "Place edited by user";
-    const message = feedbackNote
-      ? `${req.user.name || "A user"} edited "${place.name}". Note: ${feedbackNote}`
-      : `${req.user.name || "A user"} edited "${place.name}" and resubmitted it for review.`;
-
-    await Promise.all(
-      admins.map((a) =>
-        User.findByIdAndUpdate(a._id, {
-          $push: { notifications: { title, message } }
-        })
-      )
-    );
+    user.wishlist.push(req.params.id);
+    await user.save();
 
     res.json({
       success: true,
-      message: "Place updated and sent for review",
-      place: updated
+      message: "Added to wishlist"
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: error.message
+    });
   }
 };
 
+exports.removeWishlist = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
 
+    user.wishlist = user.wishlist.filter(
+      (id) => id.toString() !== req.params.id
+    );
 
+    await user.save();
 
-
-
-
-
-
-// ================= Delete Place =================
-
-
-exports.deletePlace = async(req,res)=>{
-
-try{
-
-
-const place =
-await Place.findById(req.params.id);
-
-
-
-if(!place){
-
-return res.status(404).json({
-
-message:"Place not found"
-
-});
-
-}
-
-
-
-if(
-place.addedBy.toString()
-!== req.user.id
-){
-
-return res.status(403).json({
-
-message:"You cannot delete this place"
-
-});
-
-}
-
-
-
-await Place.findByIdAndDelete(
-req.params.id
-);
-
-
-
-await User.findByIdAndUpdate(
-
-req.user.id,
-
-{
-
-$pull:{
-
-addedPlaces:req.params.id
-
-}
-
-}
-
-);
-
-
-
-res.json({
-
-success:true,
-
-message:"Place deleted successfully"
-
-});
-
-
-
-}catch(error){
-
-res.status(500).json({
-
-message:error.message
-
-});
-
-}
-
+    res.json({
+      success: true,
+      message: "Removed from wishlist"
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
 };
-
-
-
-
-
-
-
-
-
-
-// ================= Wishlist =================
-
-
-exports.addWishlist = async(req,res)=>{
-
-try{
-
-
-const user =
-await User.findById(req.user.id);
-
-
-
-if(user.wishlist.includes(req.params.id)){
-
-return res.json({
-
-message:"Already in wishlist"
-
-});
-
-}
-
-
-
-user.wishlist.push(req.params.id);
-
-
-await user.save();
-
-
-
-res.json({
-
-success:true,
-
-message:"Added to wishlist"
-
-});
-
-
-}catch(error){
-
-res.status(500).json({
-
-message:error.message
-
-});
-
-}
-
-};
-
-
-
-
-
-
-exports.removeWishlist = async(req,res)=>{
-
-try{
-
-
-const user =
-await User.findById(req.user.id);
-
-
-
-user.wishlist =
-user.wishlist.filter(
-
-id=>id.toString()
-!==req.params.id
-
-);
-
-
-
-await user.save();
-
-
-
-res.json({
-
-success:true,
-
-message:"Removed from wishlist"
-
-});
-
-
-
-}catch(error){
-
-res.status(500).json({
-
-message:error.message
-
-});
-
-}
-
-};
-
-
-
-
-
-
 
 exports.getWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate(
       "wishlist",
-      "name shortDescription description city state country location imageUrl averageRating visitorsCount approvalStatus"
+      "name shortDescription description city state country location imageUrl averageRating visitorsCount"
     );
 
     res.json({
@@ -468,18 +144,8 @@ exports.getWishlist = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
 // ================= Rating =================
 // Body: { value: 1-5, feedback?: string }
-// Updates averageRating from all ratings. Does NOT change visitorsCount
-// (visitorsCount is owned by mark-visited). Optionally marks place visited.
 
 exports.ratePlace = async (req, res) => {
   try {
@@ -538,17 +204,9 @@ exports.ratePlace = async (req, res) => {
         ratingsCount: place.ratings.length
       }
     });
-
-
-
-}catch(error){
-
-res.status(500).json({
-
-message:error.message
-
-});
-
-}
-
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
 };

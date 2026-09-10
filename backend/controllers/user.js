@@ -213,18 +213,6 @@ message:"Invalid password"
 
 }
 
-// Pending / rejected admin applicants cannot log in until approved
-if (user.role === "admin" && user.adminStatus === "pending") {
-  return res.status(403).json({
-    message: "Admin application still pending. Wait for Preet to approve, then login."
-  });
-}
-if (user.role === "admin" && user.adminStatus === "rejected") {
-  return res.status(403).json({
-    message: "Admin application was rejected. Contact Preet or register as a normal user."
-  });
-}
-
 
 
 
@@ -269,8 +257,6 @@ name:user.name,
 email:user.email,
 
 role:user.role,
-
-adminStatus:user.adminStatus || "none",
 
 phone:user.phone || "",
 
@@ -330,21 +316,12 @@ message:"Refresh token required"
 
 
 
-const refreshSecret =
-process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
-
-if (!refreshSecret) {
-return res.status(500).json({
-message: "JWT_REFRESH_SECRET (or JWT_SECRET) is not set on the server"
-});
-}
-
 const decoded =
 jwt.verify(
 
 refreshToken,
 
-refreshSecret
+process.env.JWT_REFRESH_SECRET
 
 );
 
@@ -479,16 +456,16 @@ exports.getCurrentUser = async (req, res) => {
       .select("-password -refreshTokens")
       .populate(
         "addedPlaces",
-        "name shortDescription description city state country location imageUrl averageRating visitorsCount approvalStatus adminFeedback createdAt"
+        "name shortDescription description city state country location imageUrl averageRating visitorsCount createdAt"
       )
       .populate(
         "wishlist",
-        "name shortDescription description city state country location imageUrl averageRating visitorsCount approvalStatus"
+        "name shortDescription description city state country location imageUrl averageRating visitorsCount"
       )
       .populate({
         path: "visitedPlaces.place",
         select:
-          "name shortDescription description city state country location imageUrl averageRating visitorsCount approvalStatus"
+          "name shortDescription description city state country location imageUrl averageRating visitorsCount"
       });
 
     res.json({
@@ -660,51 +637,12 @@ message:error.message
 
 };
 
-// ================= Register as Admin (pending until Preet approves) =================
-
-exports.registerAdmin = async (req, res) => {
-  try {
-    const { name, email, password, phone, location } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "name, email, password required" });
-    }
-
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      phone: phone || "",
-      location: location || "",
-      role: "admin",
-      adminStatus: "pending"
-    });
-
-    res.json({
-      message: "Admin registration submitted. Wait for main admin (Preet) approval.",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        adminStatus: user.adminStatus
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
 // ================= Update Profile =================
+// Profile picture / cover image edit removed — text fields only.
 
 exports.updateProfile = async (req, res) => {
   try {
-    const allowed = ["name", "phone", "location", "profileImage", "coverImage", "bio"];
+    const allowed = ["name", "phone", "location", "bio"];
     const updates = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -732,7 +670,7 @@ exports.getVisitedPlaces = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate({
       path: "visitedPlaces.place",
-      select: "name shortDescription description city state country location imageUrl averageRating visitorsCount approvalStatus"
+      select: "name shortDescription description city state country location imageUrl averageRating visitorsCount"
     });
 
     if (!user) {

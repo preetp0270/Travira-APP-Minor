@@ -58,7 +58,6 @@ import kotlinx.coroutines.launch
 fun EditPlaceScreen(
     place: Place,
     tokenManager: TokenManager,
-    isAdminEdit: Boolean = false,
     onBack: () -> Unit,
     onSaved: (Place) -> Unit,
     modifier: Modifier = Modifier
@@ -75,7 +74,6 @@ fun EditPlaceScreen(
     var location by remember { mutableStateOf(place.location.orEmpty()) }
     var existingImageUrl by remember { mutableStateOf(place.imageUrl) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-    var editNote by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var successMsg by remember { mutableStateOf<String?>(null) }
@@ -86,13 +84,10 @@ fun EditPlaceScreen(
         if (uri != null) imageUri = uri
     }
 
-    val title = if (isAdminEdit) "Edit place (admin)" else "Edit place"
-    val submitLabel = if (isAdminEdit) "Save & notify owner" else "Save & resubmit"
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(title) },
+                title = { Text("Edit place") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -173,41 +168,6 @@ fun EditPlaceScreen(
             EditField("Country", country) { country = it }
             EditField("Location (address or lat,lng)", location) { location = it }
 
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (isAdminEdit)
-                    "Feedback for the owner (optional)"
-                else
-                    "Note for admin / reason for edit (optional)",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF455A64)
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(
-                value = editNote,
-                onValueChange = { editNote = it },
-                label = {
-                    Text(
-                        if (isAdminEdit) "Message to owner"
-                        else "Message to admin"
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                minLines = 2,
-                maxLines = 4
-            )
-
-            if (!isAdminEdit) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Editing will set the place back to pending until an admin reviews it.",
-                    fontSize = 12.sp,
-                    color = Color(0xFFF57F17)
-                )
-            }
-
             if (error != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(error!!, color = Color(0xFFC62828), fontSize = 13.sp)
@@ -218,23 +178,19 @@ fun EditPlaceScreen(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-
             Button(
                 onClick = {
                     if (name.isBlank()) {
-                        error = "Name is required"
+                        error = "Place name is required"
                         return@Button
                     }
-                    val token = tokenManager.accessToken
-                    if (token.isNullOrBlank()) {
-                        error = "Please login first"
-                        return@Button
-                    }
-                    loading = true
-                    error = null
-                    successMsg = null
                     scope.launch {
+                        loading = true
+                        error = null
+                        successMsg = null
                         try {
+                            val token = tokenManager.accessToken
+                                ?: throw Exception("Not logged in")
                             var imageUrl = existingImageUrl
                             if (imageUri != null) {
                                 imageUrl = CloudinaryUploader.uploadImage(context, imageUri!!)
@@ -247,22 +203,13 @@ fun EditPlaceScreen(
                                 state = state.trim().ifBlank { null },
                                 country = country.trim().ifBlank { null },
                                 location = location.trim().ifBlank { null },
-                                imageUrl = imageUrl,
-                                editNote = editNote.trim().ifBlank { null }
+                                imageUrl = imageUrl
                             )
-                            val res = if (isAdminEdit) {
-                                RetrofitInstance.adminApi.updatePlace(
-                                    bearer = "Bearer $token",
-                                    id = place._id,
-                                    body = body
-                                )
-                            } else {
-                                RetrofitInstance.placeApi.updatePlace(
-                                    bearer = "Bearer $token",
-                                    id = place._id,
-                                    body = body
-                                )
-                            }
+                            val res = RetrofitInstance.adminApi.updatePlace(
+                                bearer = "Bearer $token",
+                                id = place._id,
+                                body = body
+                            )
                             val updated = res.place ?: place.copy(
                                 name = body.name,
                                 shortDescription = body.shortDescription,
@@ -271,13 +218,9 @@ fun EditPlaceScreen(
                                 state = body.state,
                                 country = body.country,
                                 location = body.location,
-                                imageUrl = body.imageUrl,
-                                approvalStatus = if (isAdminEdit) place.approvalStatus else "pending",
-                                adminFeedback = body.editNote ?: place.adminFeedback
+                                imageUrl = body.imageUrl
                             )
-                            successMsg = res.message
-                                ?: if (isAdminEdit) "Saved. Owner notified."
-                                else "Saved and sent for review. Admins notified."
+                            successMsg = res.message ?: "Place saved"
                             kotlinx.coroutines.delay(700)
                             onSaved(updated)
                         } catch (e: Exception) {
@@ -297,13 +240,13 @@ fun EditPlaceScreen(
                 if (loading) {
                     CircularProgressIndicator(
                         color = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp
                     )
                 } else {
-                    Text(submitLabel, fontWeight = FontWeight.SemiBold)
+                    Text("Save", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
-
             Spacer(modifier = Modifier.height(40.dp))
         }
     }
@@ -325,6 +268,7 @@ private fun EditField(
             .padding(bottom = 10.dp),
         shape = RoundedCornerShape(12.dp),
         singleLine = singleLine,
-        minLines = if (singleLine) 1 else 3
+        minLines = if (singleLine) 1 else 3,
+        maxLines = if (singleLine) 1 else 6
     )
 }

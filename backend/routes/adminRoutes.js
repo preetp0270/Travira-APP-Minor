@@ -7,10 +7,6 @@ const adminMiddleware = require("../middleware/adminMiddleware");
 const {
   getAllPlaces,
   getPlaceAdminDetail,
-  getPendingPlaces,
-  approvePlace,
-  rejectPlace,
-  setPlaceStatus,
   updateAnyPlace,
   deleteAnyPlace,
   adminAddPlace,
@@ -18,22 +14,15 @@ const {
   getUserDetail,
   adminCreateUser,
   adminUpdateUser,
-  adminDeleteUser,
-  getAdmins,
-  setAdminStatus,
-  deleteAdmin
+  adminDeleteUser
 } = require("../controllers/admin");
 
 // All routes require logged-in admin (or superadmin)
 router.use(authMiddleware, adminMiddleware);
 
-// ── Places ──
+// ── Places (admin only — add / edit / delete) ──
 router.get("/places", getAllPlaces);
-router.get("/places/pending", getPendingPlaces);
 router.get("/places/:id", getPlaceAdminDetail);
-router.put("/places/:id/approve", approvePlace);
-router.put("/places/:id/reject", rejectPlace);
-router.put("/places/:id/status", setPlaceStatus);
 router.put("/places/:id", updateAnyPlace);
 router.delete("/places/:id", deleteAnyPlace);
 router.post("/places", adminAddPlace);
@@ -44,10 +33,5 @@ router.get("/users/:id", getUserDetail);
 router.post("/users", adminCreateUser);
 router.put("/users/:id", adminUpdateUser);
 router.delete("/users/:id", adminDeleteUser);
-
-// ── Admins (Preet / superadmin only – enforced in controller) ──
-router.get("/admins", getAdmins);
-router.put("/admins/:id/status", setAdminStatus);
-router.delete("/admins/:id", deleteAdmin);
 
 module.exports = router;

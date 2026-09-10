@@ -26,9 +26,7 @@ data class AddPlaceRequest(
     val state: String? = null,
     val country: String? = null,
     val location: String? = null,
-    val imageUrl: String? = null,
-    /** Optional note sent with an edit (user → admin or admin → user). */
-    val editNote: String? = null
+    val imageUrl: String? = null
 )
 
 data class WishlistResponse(
@@ -62,21 +60,12 @@ data class RegisterRequest(
     val password: String
 )
 
-data class RegisterAdminRequest(
-    val name: String,
-    val email: String,
-    val password: String,
-    val phone: String? = null,
-    val location: String? = null
-)
-
 data class AuthUserDto(
     val id: String? = null,
     val _id: String? = null,
     val name: String = "",
     val email: String = "",
     val role: String = "user",
-    val adminStatus: String? = "none",
     val phone: String? = null,
     val location: String? = null
 )
@@ -111,9 +100,7 @@ data class UpdateProfileRequest(
     val name: String? = null,
     val phone: String? = null,
     val location: String? = null,
-    val bio: String? = null,
-    val profileImage: String? = null,
-    val coverImage: String? = null
+    val bio: String? = null
 )
 
 data class MarkNotificationsReadRequest(
@@ -166,9 +153,6 @@ data class AdminPlacesResponse(
 )
 
 data class PlaceCounts(
-    val pending: Int = 0,
-    val approved: Int = 0,
-    val rejected: Int = 0,
     val total: Int = 0
 )
 
@@ -194,16 +178,5 @@ data class AdminUserDetailResponse(
     val success: Boolean = false,
     val user: User? = null,
     val passwordNote: String? = null,
-    val message: String? = null
-)
-
-data class AdminListResponse(
-    val success: Boolean = false,
-    val admins: List<User> = emptyList()
-)
-
-data class StatusBody(
-    val status: String,
-    val feedback: String? = null,
     val message: String? = null
 )

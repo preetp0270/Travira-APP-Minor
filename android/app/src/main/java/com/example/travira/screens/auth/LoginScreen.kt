@@ -53,11 +53,6 @@ import com.example.travira.remote.LoginRequest
 import com.example.travira.remote.RegisterRequest
 import com.example.travira.remote.RetrofitInstance
 import kotlinx.coroutines.launch
-import org.json.JSONObject
-import retrofit2.HttpException
-import java.io.IOException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
 
 @Composable
 fun LoginScreen(
@@ -67,9 +62,6 @@ fun LoginScreen(
     modifier: Modifier = Modifier
 ) {
     var isRegister by remember { mutableStateOf(false) }
-    var isAdminRegister by remember { mutableStateOf(false) }
-    var phone by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -104,11 +96,7 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = when {
-                    isAdminRegister -> "Apply for Admin access"
-                    isRegister -> "Create your account"
-                    else -> "Welcome back"
-                },
+                text = if (isRegister) "Create your account" else "Welcome back",
                 fontSize = 15.sp,
                 color = Color.White.copy(alpha = 0.85f)
             )
@@ -227,32 +215,13 @@ fun LoginScreen(
                     error = null
                     scope.launch {
                         try {
-                            if (isRegister && isAdminRegister) {
-                                RetrofitInstance.authApi.registerAdmin(
-                                    com.example.travira.remote.RegisterAdminRequest(
-                                        name = name.trim(),
-                                        email = email.trim(),
-                                        password = password,
-                                        phone = phone.trim().ifBlank { null },
-                                        location = location.trim().ifBlank { null }
-                                    )
-                                )
-                                error = null
-                                // Don't auto-login pending admins
-                                isRegister = false
-                                isAdminRegister = false
-                                error = "Admin application submitted. Wait for Preet to approve, then login."
-                                return@launch
-                            } else if (isRegister) {
+                            if (isRegister) {
                                 RetrofitInstance.authApi.register(
                                     RegisterRequest(name.trim(), email.trim(), password)
                                 )
                                 val login = RetrofitInstance.authApi.login(
                                     LoginRequest(email.trim(), password)
                                 )
-                                if (login.accessToken.isBlank()) {
-                                    throw Exception("Login succeeded but no access token was returned.")
-                                }
                                 val u = login.user
                                 tokenManager.saveSession(
                                     accessToken = login.accessToken,
@@ -266,17 +235,6 @@ fun LoginScreen(
                                 val login = RetrofitInstance.authApi.login(
                                     LoginRequest(email.trim(), password)
                                 )
-                                if (login.accessToken.isBlank()) {
-                                    throw Exception("Login succeeded but no access token was returned.")
-                                }
-                                // Pending admin applications should not fully log in until approved
-                                val adminStatus = login.user?.adminStatus
-                                if (login.user?.role == "admin" && adminStatus == "pending") {
-                                    throw Exception("Your admin application is still pending. Wait for Preet to approve, then try again.")
-                                }
-                                if (login.user?.role == "admin" && adminStatus == "rejected") {
-                                    throw Exception("Your admin application was rejected. Contact Preet or sign up as a normal user.")
-                                }
                                 val u = login.user
                                 tokenManager.saveSession(
                                     accessToken = login.accessToken,
@@ -289,7 +247,7 @@ fun LoginScreen(
                             }
                             onLoginSuccess()
                         } catch (e: Exception) {
-                            error = parseAuthError(e)
+                            error = e.message ?: "Something went wrong"
                             Log.e("TRAVIRA_AUTH", "Login/Register failed: ${e.message}", e)
                         } finally {
                             loading = false
@@ -322,7 +280,6 @@ fun LoginScreen(
 
             TextButton(onClick = {
                 isRegister = !isRegister
-                isAdminRegister = false
                 error = null
             }) {
                 Text(
@@ -332,21 +289,9 @@ fun LoginScreen(
                 )
             }
 
-            TextButton(onClick = {
-                isRegister = true
-                isAdminRegister = !isAdminRegister
-                error = null
-            }) {
-                Text(
-                    text = if (isAdminRegister) "Switch to normal Sign up"
-                    else "Apply as Admin",
-                    color = Color(0xFFB2EBF2)
-                )
-            }
-
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "You can browse places as a guest.\nLogin is required for wishlist, AI & adding places.",
+                text = "You can browse places as a guest.\nLogin is required for wishlist & AI chat.",
                 fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.65f),
                 textAlign = TextAlign.Center,
@@ -371,40 +316,5 @@ fun LoginScreen(
                 tint = Color.White
             )
         }
-    }
-}
-
-/** Maps Retrofit / network failures to a clear message for the login UI. */
-private fun parseAuthError(e: Exception): String {
-    return when (e) {
-        is HttpException -> {
-            val body = try {
-                e.response()?.errorBody()?.string()
-            } catch (_: Exception) {
-                null
-            }
-            val serverMsg = body?.let { raw ->
-                try {
-                    JSONObject(raw).optString("message").takeIf { it.isNotBlank() }
-                } catch (_: Exception) {
-                    null
-                }
-            }
-            serverMsg
-                ?: when (e.code()) {
-                    400 -> "Invalid email or password"
-                    401 -> "Unauthorized — check email and password"
-                    404 -> "User not found. Create an account first."
-                    500 -> "Server error. Please try again in a moment."
-                    else -> "Request failed (HTTP ${e.code()})"
-                }
-        }
-        is SocketTimeoutException ->
-            "Server is waking up or slow (Render free tier). Wait ~30s and try again."
-        is UnknownHostException ->
-            "No internet connection. Check Wi‑Fi / mobile data."
-        is IOException ->
-            "Network error: ${e.message ?: "could not reach server"}"
-        else -> e.message?.takeIf { it.isNotBlank() } ?: "Something went wrong"
     }
 }

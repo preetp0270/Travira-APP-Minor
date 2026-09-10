@@ -3,7 +3,6 @@ package com.example.travira.screens.admin
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,9 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
@@ -30,7 +26,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -38,7 +33,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -62,9 +56,7 @@ import coil3.compose.AsyncImage
 import com.example.travira.auth.TokenManager
 import com.example.travira.model.Place
 import com.example.travira.model.User
-import com.example.travira.remote.PlaceCounts
 import com.example.travira.remote.RetrofitInstance
-import com.example.travira.remote.StatusBody
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,12 +67,7 @@ fun AdminDashboardScreen(
     modifier: Modifier = Modifier
 ) {
     var tab by remember { mutableIntStateOf(0) }
-    val isSuper = tokenManager.isSuperAdmin
-    val tabs = if (isSuper) {
-        listOf("Places", "Users", "Approvals", "Admins")
-    } else {
-        listOf("Places", "Users", "Approvals")
-    }
+    val tabs = listOf("Places", "Users")
 
     Scaffold(
         topBar = {
@@ -117,12 +104,7 @@ fun AdminDashboardScreen(
                         text = { Text(title) },
                         icon = {
                             Icon(
-                                when (i) {
-                                    0 -> Icons.Default.Place
-                                    1 -> Icons.Default.People
-                                    2 -> Icons.Default.Check
-                                    else -> Icons.Default.AdminPanelSettings
-                                },
+                                if (i == 0) Icons.Default.Place else Icons.Default.People,
                                 contentDescription = null
                             )
                         }
@@ -133,8 +115,6 @@ fun AdminDashboardScreen(
             when (tabs.getOrNull(tab)) {
                 "Places" -> AdminPlacesTab(tokenManager)
                 "Users" -> AdminUsersTab(tokenManager)
-                "Approvals" -> AdminApprovalsTab(tokenManager)
-                "Admins" -> AdminAdminsTab(tokenManager)
             }
         }
     }
@@ -144,8 +124,7 @@ fun AdminDashboardScreen(
 private fun AdminPlacesTab(tokenManager: TokenManager) {
     val scope = rememberCoroutineScope()
     var places by remember { mutableStateOf<List<Place>>(emptyList()) }
-    var counts by remember { mutableStateOf<PlaceCounts?>(null) }
-    var filter by remember { mutableStateOf("all") }
+    var total by remember { mutableStateOf(0) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<Place?>(null) }
@@ -156,9 +135,9 @@ private fun AdminPlacesTab(tokenManager: TokenManager) {
             error = null
             try {
                 val token = tokenManager.accessToken ?: return@launch
-                val res = RetrofitInstance.adminApi.getAllPlaces("Bearer $token", filter)
+                val res = RetrofitInstance.adminApi.getAllPlaces("Bearer $token")
                 places = res.places
-                counts = res.counts
+                total = res.counts?.total ?: res.places.size
             } catch (e: Exception) {
                 error = e.message
             } finally {
@@ -167,7 +146,7 @@ private fun AdminPlacesTab(tokenManager: TokenManager) {
         }
     }
 
-    LaunchedEffect(filter) { load() }
+    LaunchedEffect(Unit) { load() }
 
     if (selected != null) {
         AdminPlaceDetail(
@@ -179,19 +158,12 @@ private fun AdminPlacesTab(tokenManager: TokenManager) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        counts?.let { c ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CountChip("All ${c.total}", filter == "all") { filter = "all" }
-                CountChip("Pending ${c.pending}", filter == "pending") { filter = "pending" }
-                CountChip("Approved ${c.approved}", filter == "approved") { filter = "approved" }
-                CountChip("Rejected ${c.rejected}", filter == "rejected") { filter = "rejected" }
-            }
-        }
+        Text(
+            text = "$total places",
+            modifier = Modifier.padding(12.dp),
+            fontWeight = FontWeight.Medium,
+            color = Color.Gray
+        )
 
         when {
             loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -210,15 +182,6 @@ private fun AdminPlacesTab(tokenManager: TokenManager) {
             }
         }
     }
-}
-
-@Composable
-private fun CountChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label, fontSize = 12.sp) }
-    )
 }
 
 @Composable
@@ -245,27 +208,14 @@ private fun AdminPlaceCard(place: Place, onClick: () -> Unit) {
                     fontSize = 13.sp,
                     color = Color.Gray
                 )
-                StatusBadge(place.approvalStatus ?: "—")
+                Text(
+                    "★ ${place.displayRating}  ·  ${place.visitorsCount} visitors",
+                    fontSize = 12.sp,
+                    color = Color(0xFF607D8B)
+                )
             }
         }
     }
-}
-
-@Composable
-private fun StatusBadge(status: String) {
-    val color = when (status) {
-        "approved" -> Color(0xFF2E7D32)
-        "rejected" -> Color(0xFFC62828)
-        "pending" -> Color(0xFFF9A825)
-        else -> Color.Gray
-    }
-    Text(
-        text = status.uppercase(),
-        color = color,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 4.dp)
-    )
 }
 
 @Composable
@@ -275,29 +225,7 @@ private fun AdminPlaceDetail(
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var feedback by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
-    var busy by remember { mutableStateOf(false) }
-
-    fun act(status: String) {
-        scope.launch {
-            busy = true
-            message = null
-            try {
-                val token = tokenManager.accessToken ?: return@launch
-                RetrofitInstance.adminApi.setPlaceStatus(
-                    "Bearer $token",
-                    place._id,
-                    StatusBody(status = status, feedback = feedback.ifBlank { null }, message = feedback.ifBlank { null })
-                )
-                message = "Status set to $status. User notified."
-            } catch (e: Exception) {
-                message = e.message
-            } finally {
-                busy = false
-            }
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -320,37 +248,11 @@ private fun AdminPlaceDetail(
         Spacer(modifier = Modifier.height(12.dp))
         Text(place.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Text(listOfNotNull(place.city, place.state, place.country).joinToString(", "), color = Color.Gray)
-        StatusBadge(place.approvalStatus ?: "—")
         Spacer(modifier = Modifier.height(8.dp))
         Text(place.shortDescription ?: place.description ?: "", fontSize = 14.sp)
         Spacer(modifier = Modifier.height(12.dp))
         Text("Rating: ${place.displayRating}  •  Visitors: ${place.visitorsCount}", fontSize = 13.sp)
 
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(
-            value = feedback,
-            onValueChange = { feedback = it },
-            label = { Text("Feedback (for user notification)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = { act("approved") },
-                enabled = !busy,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
-            ) { Text("Approve") }
-            Button(
-                onClick = { act("rejected") },
-                enabled = !busy,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
-            ) { Text("Reject") }
-            Button(
-                onClick = { act("pending") },
-                enabled = !busy,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF9A825))
-            ) { Text("Pending") }
-        }
         message?.let {
             Spacer(modifier = Modifier.height(8.dp))
             Text(it, color = Color(0xFF1565C0))
@@ -417,16 +319,6 @@ private fun AdminUsersTab(tokenManager: TokenManager) {
         ) {
             IconButton(onClick = { selected = null; actionMsg = null }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
-            }
-            if (!u.profileImage.isNullOrBlank()) {
-                coil3.compose.AsyncImage(
-                    model = u.profileImage,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(36.dp))
-                )
-                Spacer(modifier = Modifier.height(8.dp))
             }
             Text(u.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text(u.email, color = Color.Gray)
@@ -523,11 +415,6 @@ private fun AdminUsersTab(tokenManager: TokenManager) {
             u.visitedPlaces.forEach { v ->
                 Text("• ${v.place?.name ?: "—"}", fontSize = 13.sp)
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Contributions (${u.addedPlaces.size})", fontWeight = FontWeight.Medium)
-            u.addedPlaces.forEach {
-                Text("• ${it.name} (${it.approvalStatus ?: "—"})", fontSize = 13.sp)
-            }
             Spacer(modifier = Modifier.height(24.dp))
         }
         return
@@ -574,244 +461,6 @@ private fun AdminUsersTab(tokenManager: TokenManager) {
                         Text(user.name, fontWeight = FontWeight.Bold)
                         Text(user.email, fontSize = 13.sp, color = Color.Gray)
                         Text("Role: ${user.role}", fontSize = 12.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AdminApprovalsTab(tokenManager: TokenManager) {
-    // Same as Places with pending filter
-    var filter by remember { mutableStateOf("pending") }
-    // Reuse places tab logic via embedding filter default
-    val scope = rememberCoroutineScope()
-    var places by remember { mutableStateOf<List<Place>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-
-    fun load() {
-        scope.launch {
-            loading = true
-            try {
-                val token = tokenManager.accessToken ?: return@launch
-                val res = RetrofitInstance.adminApi.getAllPlaces("Bearer $token", filter)
-                places = res.places
-            } catch (_: Exception) {
-            } finally {
-                loading = false
-            }
-        }
-    }
-
-    LaunchedEffect(filter) { load() }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CountChip("Pending", filter == "pending") { filter = "pending" }
-            CountChip("Rejected", filter == "rejected") { filter = "rejected" }
-            CountChip("Approved", filter == "approved") { filter = "approved" }
-        }
-        if (loading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        } else {
-            LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(places, key = { it._id }) { place ->
-                    AdminApprovalCard(tokenManager, place) { load() }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AdminApprovalCard(tokenManager: TokenManager, place: Place, onDone: () -> Unit) {
-    val scope = rememberCoroutineScope()
-    var feedback by remember { mutableStateOf("") }
-
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(place.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text(listOfNotNull(place.city, place.state).joinToString(", "), color = Color.Gray, fontSize = 13.sp)
-            StatusBadge(place.approvalStatus ?: "pending")
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = feedback,
-                onValueChange = { feedback = it },
-                label = { Text("Feedback") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            try {
-                                val token = tokenManager.accessToken ?: return@launch
-                                RetrofitInstance.adminApi.approvePlace(
-                                    "Bearer $token",
-                                    place._id,
-                                    mapOf("message" to (feedback.ifBlank { "Approved" }))
-                                )
-                                onDone()
-                            } catch (_: Exception) { }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
-                ) {
-                    Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
-                    Text(" Approve")
-                }
-                Button(
-                    onClick = {
-                        scope.launch {
-                            try {
-                                val token = tokenManager.accessToken ?: return@launch
-                                RetrofitInstance.adminApi.rejectPlace(
-                                    "Bearer $token",
-                                    place._id,
-                                    mapOf("feedback" to (feedback.ifBlank { "Rejected by admin" }))
-                                )
-                                onDone()
-                            } catch (_: Exception) { }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
-                ) {
-                    Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp))
-                    Text(" Reject")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AdminAdminsTab(tokenManager: TokenManager) {
-    val scope = rememberCoroutineScope()
-    var admins by remember { mutableStateOf<List<User>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    fun load() {
-        scope.launch {
-            loading = true
-            error = null
-            try {
-                val token = tokenManager.accessToken ?: return@launch
-                val res = RetrofitInstance.adminApi.getAdmins("Bearer $token")
-                admins = res.admins
-            } catch (e: Exception) {
-                error = e.message
-            } finally {
-                loading = false
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) { load() }
-
-    when {
-        loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(error ?: "", color = Color.Red, modifier = Modifier.padding(16.dp))
-        }
-        else -> LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item {
-                Text(
-                    "Admin applications & accounts",
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                Text(
-                    "Approve, reject, set pending, or remove. Applicants are notified.",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-            }
-            items(admins, key = { it.userId }) { admin ->
-                val status = admin.adminStatus ?: "none"
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(admin.name, fontWeight = FontWeight.Bold)
-                        Text(admin.email, fontSize = 13.sp, color = Color.Gray)
-                        Text(
-                            "Role: ${admin.role}  •  Application: $status",
-                            fontSize = 12.sp,
-                            color = when (status) {
-                                "approved" -> Color(0xFF2E7D32)
-                                "rejected" -> Color(0xFFC62828)
-                                "pending" -> Color(0xFFF9A825)
-                                else -> Color.Gray
-                            }
-                        )
-                        if (admin.role != "superadmin") {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(top = 8.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        scope.launch {
-                                            try {
-                                                val token = tokenManager.accessToken ?: return@launch
-                                                RetrofitInstance.adminApi.setAdminStatus(
-                                                    "Bearer $token",
-                                                    admin.userId,
-                                                    StatusBody("approved", feedback = "Welcome to the Travira admin team")
-                                                )
-                                                load()
-                                            } catch (_: Exception) { }
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
-                                ) { Text("Approve") }
-                                Button(
-                                    onClick = {
-                                        scope.launch {
-                                            try {
-                                                val token = tokenManager.accessToken ?: return@launch
-                                                RetrofitInstance.adminApi.setAdminStatus(
-                                                    "Bearer $token",
-                                                    admin.userId,
-                                                    StatusBody("rejected", feedback = "Your admin application was not approved")
-                                                )
-                                                load()
-                                            } catch (_: Exception) { }
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
-                                ) { Text("Reject") }
-                                Button(
-                                    onClick = {
-                                        scope.launch {
-                                            try {
-                                                val token = tokenManager.accessToken ?: return@launch
-                                                RetrofitInstance.adminApi.setAdminStatus(
-                                                    "Bearer $token",
-                                                    admin.userId,
-                                                    StatusBody("pending")
-                                                )
-                                                load()
-                                            } catch (_: Exception) { }
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF9A825))
-                                ) { Text("Pending") }
-                            }
-                            TextButton(
-                                onClick = {
-                                    scope.launch {
-                                        try {
-                                            val token = tokenManager.accessToken ?: return@launch
-                                            RetrofitInstance.adminApi.deleteAdmin("Bearer $token", admin.userId)
-                                            load()
-                                        } catch (_: Exception) { }
-                                    }
-                                }
-                            ) {
-                                Text("Delete admin", color = Color(0xFFC62828), fontSize = 13.sp)
-                            }
-                        }
                     }
                 }
             }

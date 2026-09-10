@@ -25,9 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,12 +47,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.example.travira.R
 import com.example.travira.model.User
 
 enum class ProfileSection {
-    EDIT_PROFILE, WISHLIST, CONTRIBUTION, VISITED, NOTIFICATIONS
+    WISHLIST, VISITED
 }
 
 @Composable
@@ -70,15 +66,13 @@ fun ProfileScreen(
     val displayName = if (isLoggedIn) (user?.name?.ifBlank { "Traveler" } ?: "Traveler") else "Guest"
     val bioFromUser = user?.bio
     val bio = when {
-        !isLoggedIn -> "Browsing as guest. Login to save wishlist, add places & use AI."
+        !isLoggedIn -> "Browsing as guest. Login to save wishlist & use AI."
         !bioFromUser.isNullOrBlank() -> bioFromUser
         else -> "Explore smarter. Discover deeper. Travel with confidence."
     }
     val email = if (isLoggedIn) (user?.email ?: "") else "guest@travira.app"
     val wishlistCount = user?.wishlist?.size ?: 0
-    val contributionCount = user?.addedPlaces?.size ?: 0
     val visitedCount = user?.visitedPlaces?.size ?: 0
-    val notificationCount = user?.notifications?.count { !it.read } ?: 0
 
     val scroll = rememberScrollState()
     val context = LocalContext.current
@@ -98,25 +92,14 @@ fun ProfileScreen(
                 .fillMaxWidth()
                 .height(280.dp)
         ) {
-            if (!user?.coverImage.isNullOrBlank()) {
-                AsyncImage(
-                    model = user?.coverImage,
-                    contentDescription = "Cover",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                )
-            } else {
-                Image(
-                    painter = painterResource(id = R.drawable.taj),
-                    contentDescription = "Cover",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                )
-            }
+            Image(
+                painter = painterResource(id = R.drawable.taj),
+                contentDescription = "Cover",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+            )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -132,32 +115,18 @@ fun ProfileScreen(
                     .align(Alignment.BottomCenter)
                     .offset(y = (-8).dp)
             ) {
-                if (!user?.profileImage.isNullOrBlank()) {
-                    AsyncImage(
-                        model = user?.profileImage,
-                        contentDescription = "Profile photo",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(96.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                            .padding(3.dp)
-                            .clip(CircleShape)
-                    )
-                } else {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                        contentDescription = "Profile photo",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(96.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                            .padding(3.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFE3F2FD))
-                    )
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    contentDescription = "Profile photo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .padding(3.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE3F2FD))
+                )
             }
         }
 
@@ -198,13 +167,6 @@ fun ProfileScreen(
 
         ProfileMenuCard {
             ProfileMenuItem(
-                icon = Icons.Default.Person,
-                title = "Profile",
-                subtitle = email,
-                onClick = { requireLoginThen(ProfileSection.EDIT_PROFILE) }
-            )
-            MenuDivider()
-            ProfileMenuItem(
                 icon = Icons.Default.Favorite,
                 title = "Wishlist",
                 trailing = if (wishlistCount > 0) wishlistCount.toString() else null,
@@ -212,26 +174,10 @@ fun ProfileScreen(
             )
             MenuDivider()
             ProfileMenuItem(
-                icon = Icons.Default.Place,
-                title = "Contribution",
-                subtitle = "Places you added",
-                trailing = if (contributionCount > 0) contributionCount.toString() else null,
-                onClick = { requireLoginThen(ProfileSection.CONTRIBUTION) }
-            )
-            MenuDivider()
-            ProfileMenuItem(
                 icon = Icons.Default.TravelExplore,
                 title = "Visited Places",
                 trailing = if (visitedCount > 0) visitedCount.toString() else null,
                 onClick = { requireLoginThen(ProfileSection.VISITED) }
-            )
-            MenuDivider()
-            ProfileMenuItem(
-                icon = Icons.Default.Notifications,
-                title = "Notifications",
-                subtitle = "Admin feedback & place updates",
-                trailing = if (notificationCount > 0) notificationCount.toString() else null,
-                onClick = { requireLoginThen(ProfileSection.NOTIFICATIONS) }
             )
             if (isLoggedIn) {
                 MenuDivider()

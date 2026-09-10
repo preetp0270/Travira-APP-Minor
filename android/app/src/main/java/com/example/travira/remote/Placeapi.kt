@@ -5,7 +5,6 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
-import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface PlaceApi {
@@ -15,25 +14,6 @@ interface PlaceApi {
 
     @GET("api/place/{id}")
     suspend fun getPlaceById(@Path("id") id: String): PlaceResponse
-
-    @POST("api/place/add")
-    suspend fun addPlace(
-        @Header("Authorization") bearer: String,
-        @Body body: AddPlaceRequest
-    ): PlaceResponse
-
-    @PUT("api/place/{id}")
-    suspend fun updatePlace(
-        @Header("Authorization") bearer: String,
-        @Path("id") id: String,
-        @Body body: AddPlaceRequest
-    ): PlaceResponse
-
-    @DELETE("api/place/{id}")
-    suspend fun deletePlace(
-        @Header("Authorization") bearer: String,
-        @Path("id") id: String
-    ): SimpleMessageResponse
 
     @GET("api/place/user/my-places")
     suspend fun getMyPlaces(

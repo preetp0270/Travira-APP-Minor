@@ -1,192 +1,110 @@
 const mongoose = require("mongoose");
 
-
 const userSchema = new mongoose.Schema({
 
-
-    name:{
-        type:String,
-        required:true
+    name: {
+        type: String,
+        required: true
     },
 
-
-    email:{
-        type:String,
-        required:true,
-        unique:true
+    email: {
+        type: String,
+        required: true,
+        unique: true
     },
 
-
-    password:{
-        type:String,
-        required:true
+    password: {
+        type: String,
+        required: true
     },
 
-
-    profileImage:{
-        type:String,
-        default:""
+    phone: {
+        type: String,
+        default: ""
     },
 
-    coverImage:{
-        type:String,
-        default:""
+    location: {
+        type: String,
+        default: ""
     },
 
-    phone:{
-        type:String,
-        default:""
+    bio: {
+        type: String,
+        default: ""
     },
 
-    location:{
-        type:String,
-        default:""
-    },
-
-    bio:{
-        type:String,
-        default:""
-    },
-
-    // For admin applicants: pending | approved | rejected
-    adminStatus:{
-        type:String,
-        enum:["none","pending","approved","rejected"],
-        default:"none"
-    },
-
-
-
-    // Places added by user
-
-    addedPlaces:[
+    addedPlaces: [
         {
-            type:mongoose.Schema.Types.ObjectId,
-            ref:"Place"
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Place"
         }
     ],
 
-
-
-    // Wishlist
-
-    wishlist:[
+    wishlist: [
         {
-            type:mongoose.Schema.Types.ObjectId,
-            ref:"Place"
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Place"
         }
     ],
 
-
-
-    // Visited Places
-
-    visitedPlaces:[
-
+    visitedPlaces: [
         {
-
-            place:{
-                type:mongoose.Schema.Types.ObjectId,
-                ref:"Place"
+            place: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Place"
             },
-
-
-            visitedAt:{
-                type:Date,
-                default:Date.now
+            visitedAt: {
+                type: Date,
+                default: Date.now
             }
-
         }
-
     ],
 
-
-
-
-    // Admin/User Notifications
-
-    notifications:[
-
+    notifications: [
         {
-
-            title:{
-                type:String,
-                required:true
+            title: {
+                type: String,
+                required: true
             },
-
-
-            message:{
-                type:String,
-                required:true
+            message: {
+                type: String,
+                required: true
             },
-
-
-            read:{
-                type:Boolean,
-                default:false
+            read: {
+                type: Boolean,
+                default: false
             },
-
-
-            createdAt:{
-                type:Date,
-                default:Date.now
+            createdAt: {
+                type: Date,
+                default: Date.now
             }
-
         }
-
     ],
 
-
-
-
-
-    role:{
-        type:String,
-        enum:["user","admin","superadmin"],
-        default:"user"
+    role: {
+        type: String,
+        enum: ["user", "admin", "superadmin"],
+        default: "user"
     },
 
-
-
-
-    // Refresh Tokens
-
-    refreshTokens:[
-
+    refreshTokens: [
         {
-
-            token:{
-                type:String,
-                required:true
+            token: {
+                type: String,
+                required: true
             },
-
-
-            createdAt:{
-                type:Date,
-                default:Date.now,
-                expires:2592000
+            createdAt: {
+                type: Date,
+                default: Date.now,
+                expires: 2592000
             }
-
         }
-
     ],
 
-
-
-
-
-    createdAt:{
-        type:Date,
-        default:Date.now
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
-
-
 });
 
-
-
-module.exports =
-mongoose.model(
-"User",
-userSchema
-);
+module.exports = mongoose.model("User", userSchema);

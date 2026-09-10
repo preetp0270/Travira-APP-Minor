@@ -18,15 +18,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,7 @@ import com.example.travira.model.Place
 private val Teal = Color(0xFF1B6B63)
 private val SoftBg = Color(0xFFF5F7F6)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     places: List<Place>,
@@ -56,11 +58,12 @@ fun HomeScreen(
     errorMessage: String? = null,
     onPlaceClick: (Place) -> Unit,
     onRetry: () -> Unit = {},
-    onAddPlaceClick: () -> Unit = {},
+    onRefresh: () -> Unit = {},
     userName: String? = null,
     modifier: Modifier = Modifier
 ) {
     var query by remember { mutableStateOf("") }
+    val pullState = rememberPullToRefreshState()
 
     val filtered = remember(places, query) {
         val q = query.trim()
@@ -132,102 +135,90 @@ fun HomeScreen(
             }
 
             else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                PullToRefreshBox(
+                    isRefreshing = isLoading,
+                    onRefresh = onRefresh,
+                    state = pullState,
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    item {
-                        HomeHeader(
-                            displayName = displayName,
-                            query = query,
-                            onQueryChange = { query = it },
-                            onRandomClick = { openRandomPlace() }
-                        )
-                    }
-
-                    if (filtered.isEmpty()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
                         item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 48.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    if (query.isBlank()) "No places found"
-                                    else "No matches for \"$query\"",
-                                    color = Color.Gray
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                if (query.isNotBlank()) {
-                                    Button(onClick = { query = "" }) { Text("Clear search") }
-                                } else {
-                                    Button(onClick = onRetry) { Text("Refresh") }
+                            HomeHeader(
+                                displayName = displayName,
+                                query = query,
+                                onQueryChange = { query = it },
+                                onRandomClick = { openRandomPlace() }
+                            )
+                        }
+
+                        if (filtered.isEmpty()) {
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 48.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        if (query.isBlank()) "No places found"
+                                        else "No matches for \"$query\"",
+                                        color = Color.Gray
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    if (query.isNotBlank()) {
+                                        Button(onClick = { query = "" }) { Text("Clear search") }
+                                    } else {
+                                        Button(onClick = onRetry) { Text("Refresh") }
+                                    }
+                                }
+                            }
+                        } else {
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (query.isBlank()) "Trending now" else "Results",
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Serif,
+                                        color = Color(0xFF1A1A1A)
+                                    )
+                                    Text(
+                                        text = "${filtered.size} place${if (filtered.size == 1) "" else "s"}",
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF78909C)
+                                    )
+                                }
+                            }
+
+                            items(
+                                items = filtered,
+                                key = { it._id.ifBlank { it.name } }
+                            ) { place ->
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    AppCard(
+                                        place = place,
+                                        onClick = { onPlaceClick(place) },
+                                        showWishlistHeart = false
+                                    )
                                 }
                             }
                         }
-                    } else {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (query.isBlank()) "Trending now" else "Results",
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Serif,
-                                    color = Color(0xFF1A1A1A)
-                                )
-                                Text(
-                                    text = "${filtered.size} place${if (filtered.size == 1) "" else "s"}",
-                                    fontSize = 14.sp,
-                                    color = Color(0xFF78909C)
-                                )
-                            }
-                        }
 
-                        items(
-                            items = filtered,
-                            key = { it._id.ifBlank { it.name } }
-                        ) { place ->
-                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                AppCard(
-                                    place = place,
-                                    onClick = { onPlaceClick(place) },
-                                    showWishlistHeart = false
-                                )
-                            }
-                        }
+                        item { Spacer(modifier = Modifier.height(110.dp)) }
                     }
-
-                    item { Spacer(modifier = Modifier.height(110.dp)) }
-                }
-
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        color = Teal,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 8.dp)
-                    )
                 }
             }
         }
 
-        FloatingActionButton(
-            onClick = onAddPlaceClick,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 100.dp),
-            containerColor = Teal,
-            contentColor = Color.White
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Add place")
-        }
     }
 }
 
