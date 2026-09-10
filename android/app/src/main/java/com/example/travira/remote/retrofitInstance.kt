@@ -120,7 +120,7 @@ private class PlaceListDeserializer : JsonDeserializer<List<Place>> {
 
 object RetrofitInstance {
 
-    const val BASE_URL = "https://travira-app.onrender.com/"
+    const val BASE_URL = "https://travira-app-minor.onrender.com/"
 
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
