@@ -53,6 +53,11 @@ import com.example.travira.remote.LoginRequest
 import com.example.travira.remote.RegisterRequest
 import com.example.travira.remote.RetrofitInstance
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import retrofit2.HttpException
+import java.io.IOException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 
 @Composable
 fun LoginScreen(
@@ -236,7 +241,8 @@ fun LoginScreen(
                                 // Don't auto-login pending admins
                                 isRegister = false
                                 isAdminRegister = false
-                                throw Exception("Admin application submitted. Wait for Preet to approve, then login.")
+                                error = "Admin application submitted. Wait for Preet to approve, then login."
+                                return@launch
                             } else if (isRegister) {
                                 RetrofitInstance.authApi.register(
                                     RegisterRequest(name.trim(), email.trim(), password)
@@ -244,6 +250,9 @@ fun LoginScreen(
                                 val login = RetrofitInstance.authApi.login(
                                     LoginRequest(email.trim(), password)
                                 )
+                                if (login.accessToken.isBlank()) {
+                                    throw Exception("Login succeeded but no access token was returned.")
+                                }
                                 val u = login.user
                                 tokenManager.saveSession(
                                     accessToken = login.accessToken,
@@ -257,6 +266,17 @@ fun LoginScreen(
                                 val login = RetrofitInstance.authApi.login(
                                     LoginRequest(email.trim(), password)
                                 )
+                                if (login.accessToken.isBlank()) {
+                                    throw Exception("Login succeeded but no access token was returned.")
+                                }
+                                // Pending admin applications should not fully log in until approved
+                                val adminStatus = login.user?.adminStatus
+                                if (login.user?.role == "admin" && adminStatus == "pending") {
+                                    throw Exception("Your admin application is still pending. Wait for Preet to approve, then try again.")
+                                }
+                                if (login.user?.role == "admin" && adminStatus == "rejected") {
+                                    throw Exception("Your admin application was rejected. Contact Preet or sign up as a normal user.")
+                                }
                                 val u = login.user
                                 tokenManager.saveSession(
                                     accessToken = login.accessToken,
@@ -269,7 +289,7 @@ fun LoginScreen(
                             }
                             onLoginSuccess()
                         } catch (e: Exception) {
-                            error = e.message ?: "Something went wrong"
+                            error = parseAuthError(e)
                             Log.e("TRAVIRA_AUTH", "Login/Register failed: ${e.message}", e)
                         } finally {
                             loading = false
@@ -351,5 +371,40 @@ fun LoginScreen(
                 tint = Color.White
             )
         }
+    }
+}
+
+/** Maps Retrofit / network failures to a clear message for the login UI. */
+private fun parseAuthError(e: Exception): String {
+    return when (e) {
+        is HttpException -> {
+            val body = try {
+                e.response()?.errorBody()?.string()
+            } catch (_: Exception) {
+                null
+            }
+            val serverMsg = body?.let { raw ->
+                try {
+                    JSONObject(raw).optString("message").takeIf { it.isNotBlank() }
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            serverMsg
+                ?: when (e.code()) {
+                    400 -> "Invalid email or password"
+                    401 -> "Unauthorized — check email and password"
+                    404 -> "User not found. Create an account first."
+                    500 -> "Server error. Please try again in a moment."
+                    else -> "Request failed (HTTP ${e.code()})"
+                }
+        }
+        is SocketTimeoutException ->
+            "Server is waking up or slow (Render free tier). Wait ~30s and try again."
+        is UnknownHostException ->
+            "No internet connection. Check Wi‑Fi / mobile data."
+        is IOException ->
+            "Network error: ${e.message ?: "could not reach server"}"
+        else -> e.message?.takeIf { it.isNotBlank() } ?: "Something went wrong"
     }
 }

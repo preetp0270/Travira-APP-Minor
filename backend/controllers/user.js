@@ -213,6 +213,18 @@ message:"Invalid password"
 
 }
 
+// Pending / rejected admin applicants cannot log in until approved
+if (user.role === "admin" && user.adminStatus === "pending") {
+  return res.status(403).json({
+    message: "Admin application still pending. Wait for Preet to approve, then login."
+  });
+}
+if (user.role === "admin" && user.adminStatus === "rejected") {
+  return res.status(403).json({
+    message: "Admin application was rejected. Contact Preet or register as a normal user."
+  });
+}
+
 
 
 
@@ -318,12 +330,21 @@ message:"Refresh token required"
 
 
 
+const refreshSecret =
+process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+
+if (!refreshSecret) {
+return res.status(500).json({
+message: "JWT_REFRESH_SECRET (or JWT_SECRET) is not set on the server"
+});
+}
+
 const decoded =
 jwt.verify(
 
 refreshToken,
 
-process.env.JWT_REFRESH_SECRET
+refreshSecret
 
 );
 
