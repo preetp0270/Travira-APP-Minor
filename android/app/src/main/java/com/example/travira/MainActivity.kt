@@ -28,7 +28,6 @@ import com.example.travira.model.Place
 import com.example.travira.model.User
 import com.example.travira.remote.RefreshRequest
 import com.example.travira.remote.RetrofitInstance
-import com.example.travira.screens.admin.AdminDashboardScreen
 import com.example.travira.screens.ai.AIChatScreen
 import com.example.travira.screens.auth.LoginScreen
 import com.example.travira.screens.home.HomeScreen
@@ -122,7 +121,6 @@ fun TraviraApp(
     var currentUser by remember { mutableStateOf<User?>(null) }
 
     var showLogin by remember { mutableStateOf(false) }
-    var showAdmin by remember { mutableStateOf(false) }
     var editingPlace by remember { mutableStateOf<Place?>(null) }
     var pendingAction by remember { mutableStateOf(PendingAction.NONE) }
     var profileSection by remember { mutableStateOf<ProfileSection?>(null) }
@@ -194,7 +192,6 @@ fun TraviraApp(
     fun onLoginSuccess() {
         isLoggedIn = true
         showLogin = false
-        // Admins stay on the main app; they open dashboard via bottom Admin tab
         when (pendingAction) {
             PendingAction.AI_CHAT -> selectedIndex = 1
             else -> {}
@@ -211,13 +208,6 @@ fun TraviraApp(
     }
 
     when {
-        showAdmin -> {
-            BackHandler { showAdmin = false }
-            AdminDashboardScreen(
-                tokenManager = tokenManager,
-                onBack = { showAdmin = false }
-            )
-        }
 
         showLogin -> {
             BackHandler {
@@ -378,18 +368,13 @@ fun TraviraApp(
                 }
 
                 TraviraBottomBar(
-                    selectedIndex = selectedIndex.coerceIn(0, if (tokenManager.isAdmin) 3 else 2),
-                    showAdminTab = tokenManager.isAdmin,
+                    selectedIndex = selectedIndex.coerceIn(0, 2),
                     onItemSelected = { index ->
                         if (index == 0 && selectedIndex == 0) {
                             refreshTrigger++
                         }
                         if (index == 1 && !tokenManager.isLoggedIn) {
                             requireAuth(PendingAction.AI_CHAT)
-                            return@TraviraBottomBar
-                        }
-                        if (index == 3 && tokenManager.isAdmin) {
-                            showAdmin = true
                             return@TraviraBottomBar
                         }
                         selectedIndex = index

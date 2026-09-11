@@ -8,14 +8,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SmartToy
@@ -41,35 +39,26 @@ data class BottomBarItem(
 fun TraviraBottomBar(
     selectedIndex: Int,
     onItemSelected: (Int) -> Unit,
-    showAdminTab: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val items = buildList {
-        add(BottomBarItem("Home", Icons.Default.Home))
-        add(BottomBarItem("AI", Icons.Default.SmartToy))
-        add(BottomBarItem("Profile", Icons.Default.Person))
-        if (showAdminTab) {
-            add(BottomBarItem("Admin", Icons.Default.AdminPanelSettings))
-        }
-    }
+    val items = listOf(
+        BottomBarItem("Home", Icons.Default.Home),
+        BottomBarItem("AI", Icons.Default.SmartToy),
+        BottomBarItem("Profile", Icons.Default.Person)
+    )
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(
-                start = if (showAdminTab) 28.dp else 60.dp,
-                end = if (showAdminTab) 28.dp else 60.dp,
-                bottom = 16.dp
-            ),
+            .padding(start = 60.dp, end = 60.dp, bottom = 16.dp),
         horizontalArrangement = Arrangement.Center
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(1f)
-                .height(65.dp)
+                .fillMaxWidth()
                 .shadow(
-                    elevation = 5.dp,
+                    elevation = 12.dp,
                     shape = RoundedCornerShape(50.dp)
                 ),
             shape = RoundedCornerShape(50.dp),
@@ -133,8 +122,7 @@ fun TraviraBottomBarPreview() {
     MaterialTheme {
         TraviraBottomBar(
             selectedIndex = 0,
-            onItemSelected = {},
-            showAdminTab = true
+            onItemSelected = {}
         )
     }
 }
