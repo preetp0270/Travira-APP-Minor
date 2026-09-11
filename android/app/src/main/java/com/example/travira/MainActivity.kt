@@ -31,6 +31,7 @@ import com.example.travira.remote.RetrofitInstance
 import com.example.travira.screens.ai.AIChatScreen
 import com.example.travira.screens.auth.LoginScreen
 import com.example.travira.screens.home.HomeScreen
+import com.example.travira.screens.places.AddPlaceScreen
 import com.example.travira.screens.places.EditPlaceScreen
 import com.example.travira.screens.places.PlaceScreen
 import com.example.travira.screens.profile.ProfileScreen
@@ -121,6 +122,7 @@ fun TraviraApp(
     var currentUser by remember { mutableStateOf<User?>(null) }
 
     var showLogin by remember { mutableStateOf(false) }
+    var showAddPlace by remember { mutableStateOf(false) }
     var editingPlace by remember { mutableStateOf<Place?>(null) }
     var pendingAction by remember { mutableStateOf(PendingAction.NONE) }
     var profileSection by remember { mutableStateOf<ProfileSection?>(null) }
@@ -243,6 +245,19 @@ fun TraviraApp(
             )
         }
 
+        showAddPlace -> {
+            BackHandler { showAddPlace = false }
+            AddPlaceScreen(
+                tokenManager = tokenManager,
+                onBack = { showAddPlace = false },
+                onSubmitted = {
+                    showAddPlace = false
+                    refreshTrigger++
+                    refreshUser()
+                }
+            )
+        }
+
         selectedPlace != null -> {
             BackHandler { selectedPlace = null }
             PlaceScreen(
@@ -304,6 +319,8 @@ fun TraviraApp(
                             onPlaceClick = { selectedPlace = it },
                             onRetry = { refreshTrigger++ },
                             onRefresh = { refreshTrigger++ },
+                            onAddClick = { showAddPlace = true },
+                            isAdmin = tokenManager.isAdmin,
                             userName = currentUser?.name
                                 ?: tokenManager.userName
                                 ?: if (isLoggedIn) "Traveler" else "Guest",

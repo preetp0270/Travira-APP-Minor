@@ -18,11 +18,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -59,6 +61,8 @@ fun HomeScreen(
     onPlaceClick: (Place) -> Unit,
     onRetry: () -> Unit = {},
     onRefresh: () -> Unit = {},
+    onAddClick: () -> Unit = {},
+    isAdmin: Boolean = false,
     userName: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -219,6 +223,22 @@ fun HomeScreen(
             }
         }
 
+        // Plus FAB — admin only (users cannot add places)
+        if (isAdmin) {
+            FloatingActionButton(
+                onClick = onAddClick,
+                containerColor = Teal,
+                contentColor = Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 20.dp, bottom = 96.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add place"
+                )
+            }
+        }
     }
 }
 
