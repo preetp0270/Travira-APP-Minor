@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,7 +27,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,32 +40,25 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.travira.remote.ApiErrorHelper
 import com.example.travira.remote.ForgotPasswordRequest
-import com.example.travira.remote.ResetPasswordRequest
 import com.example.travira.remote.RetrofitInstance
 import kotlinx.coroutines.launch
 
 /**
- * Step 1: request reset email.
- * Step 2 (optional in-app): paste token from email/dev + set new password.
- * Primary path is the web page linked in the email.
+ * Request a password-reset email. User opens the secure web form from the link
+ * (no in-app token/password step). After reset, all other sessions are invalidated.
  */
 @Composable
 fun ForgotPasswordScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var step by remember { mutableStateOf(0) } // 0 = email, 1 = token+password
     var email by remember { mutableStateOf("") }
-    var token by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var success by remember { mutableStateOf<String?>(null) }
@@ -112,10 +103,7 @@ fun ForgotPasswordScreen(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                if (step == 0)
-                    "We’ll email you a secure link to set a new password."
-                else
-                    "Prefer the in-app form? Paste the token from the email link and set a new password.",
+                "We’ll email you a secure link. Open it in your browser to set a new password.",
                 fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.88f),
                 textAlign = TextAlign.Center
@@ -134,53 +122,18 @@ fun ForgotPasswordScreen(
                     )
                     .padding(20.dp)
             ) {
-                if (step == 0) {
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        leadingIcon = { Icon(Icons.Default.Email, null) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = fieldColors
-                    )
-                } else {
-                    OutlinedTextField(
-                        value = token,
-                        onValueChange = { token = it },
-                        label = { Text("Reset token") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = fieldColors
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("New password") },
-                        leadingIcon = { Icon(Icons.Default.Lock, null) },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = fieldColors
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        label = { Text("Confirm password") },
-                        leadingIcon = { Icon(Icons.Default.Lock, null) },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = fieldColors
-                    )
-                }
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    leadingIcon = { Icon(Icons.Default.Email, null) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = fieldColors,
+                    enabled = success == null
+                )
 
                 if (error != null) {
                     Spacer(Modifier.height(12.dp))
@@ -194,12 +147,11 @@ fun ForgotPasswordScreen(
 
             Spacer(Modifier.height(22.dp))
 
-            Button(
-                onClick = {
-                    if (loading) return@Button
-                    error = null
-                    success = null
-                    if (step == 0) {
+            if (success == null) {
+                Button(
+                    onClick = {
+                        if (loading) return@Button
+                        error = null
                         if (email.isBlank()) {
                             error = "Enter your account email"
                             return@Button
@@ -217,105 +169,70 @@ fun ForgotPasswordScreen(
                                         throw first
                                     }
                                 }
-                                // Auto-fill token when server returns it (SMTP not configured)
-                                res.resetToken?.takeIf { it.isNotBlank() }?.let { token = it }
                                 success = buildString {
                                     append(
                                         res.message
                                             ?: "If that email is registered, a reset link was sent."
                                     )
-                                    if (!res.resetToken.isNullOrBlank()) {
-                                        append("\n\nToken filled below — enter new password & confirm.")
-                                    }
+                                    append(
+                                        "\n\nOpen the link in your email (check spam). " +
+                                            "After you change the password, you will be signed out on all devices."
+                                    )
+                                    // Only if SMTP is off and server returns a link for local/dev
                                     if (!res.resetLink.isNullOrBlank()) {
-                                        append("\n\nOr open in browser:\n")
+                                        append("\n\nDev link:\n")
                                         append(res.resetLink)
                                     }
                                 }
-                                step = 1
                             } catch (e: Exception) {
                                 error = ApiErrorHelper.message(e)
                             } finally {
                                 loading = false
                             }
                         }
+                    },
+                    enabled = !loading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color(0xFF0B1D2A)
+                    )
+                ) {
+                    if (loading) {
+                        CircularProgressIndicator(
+                            color = Color(0xFF1565C0),
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.5.dp
+                        )
                     } else {
-                        if (token.isBlank() || password.isBlank()) {
-                            error = "Token and new password are required"
-                            return@Button
-                        }
-                        if (password != confirmPassword) {
-                            error = "Passwords do not match"
-                            return@Button
-                        }
-                        if (password.length < 6) {
-                            error = "Password must be at least 6 characters"
-                            return@Button
-                        }
-                        loading = true
-                        scope.launch {
-                            try {
-                                val resetBody = ResetPasswordRequest(
-                                    token = token.trim(),
-                                    password = password,
-                                    confirmPassword = confirmPassword
-                                )
-                                val res = try {
-                                    RetrofitInstance.authApi.resetPassword(resetBody)
-                                } catch (first: Exception) {
-                                    try {
-                                        RetrofitInstance.authApi.resetPasswordAlt(resetBody)
-                                    } catch (_: Exception) {
-                                        throw first
-                                    }
-                                }
-                                success = res.message ?: "Password updated. You can log in now."
-                            } catch (e: Exception) {
-                                error = ApiErrorHelper.message(e)
-                            } finally {
-                                loading = false
-                            }
-                        }
+                        Text(
+                            "Send reset link",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
                     }
-                },
-                enabled = !loading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF0B1D2A)
-                )
-            ) {
-                if (loading) {
-                    CircularProgressIndicator(
-                        color = Color(0xFF1565C0),
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.5.dp
-                    )
-                } else {
-                    Text(
-                        if (step == 0) "Send reset link" else "Update password",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
                 }
-            }
-
-            if (step == 1) {
-                TextButton(onClick = {
-                    step = 0
-                    error = null
-                    success = null
-                }) {
-                    Text("Back to email step", color = Color.White)
+            } else {
+                Button(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color(0xFF0B1D2A)
+                    )
+                ) {
+                    Text("Back to login", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
 
             Text(
-                "Open the link in your email to change the password on the secure web form. " +
-                    "You can also paste the token here if needed.",
+                "The email link opens a secure web form. Password change signs you out everywhere for safety.",
                 fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,

@@ -54,6 +54,12 @@ const userSchema = new mongoose.Schema({
     default: null
   },
 
+  /** Bumped on password reset so existing JWTs become invalid on all devices */
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
+
   addedPlaces: [
     {
       type: mongoose.Schema.Types.ObjectId,

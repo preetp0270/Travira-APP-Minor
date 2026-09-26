@@ -98,6 +98,8 @@ function healthHandler(req, res) {
       "chat",
       "forgot-password",
       "reset-password",
+      "admin-web-upload",
+      "session-invalidate-on-reset",
       "ping",
       "health"
     ]

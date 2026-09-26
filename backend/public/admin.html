@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Travira — Admin place uploader</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: "Segoe UI", system-ui, sans-serif;
+      background: linear-gradient(160deg, #0B1D2A, #0D47A1, #1565C0, #42A5F5);
+      color: #0D1B2A; padding: 24px;
+    }
+    .wrap { max-width: 640px; margin: 0 auto; }
+    .card {
+      background: rgba(255,255,255,0.94);
+      border-radius: 24px; padding: 28px 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.6);
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 6px; color: #1565C0; font-size: 1.45rem; }
+    p.sub { margin: 0 0 18px; color: #546E7A; font-size: 0.9rem; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin: 12px 0 6px; color: #37474F; }
+    input, textarea, select {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #B0BEC5;
+      font-size: 1rem; outline: none; font-family: inherit;
+    }
+    textarea { min-height: 88px; resize: vertical; }
+    input:focus, textarea:focus { border-color: #1565C0; box-shadow: 0 0 0 3px rgba(21,101,192,0.2); }
+    button {
+      padding: 14px 18px; border: none; border-radius: 14px;
+      background: #1565C0; color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    button.secondary { background: #546E7A; }
+    button.danger { background: #C62828; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    .row button { flex: 1; min-width: 120px; }
+    .msg { margin-top: 14px; padding: 12px; border-radius: 12px; font-size: 0.9rem; display: none; }
+    .msg.ok { display: block; background: #E8F5E9; color: #2E7D32; }
+    .msg.err { display: block; background: #FFEBEE; color: #C62828; }
+    .msg.info { display: block; background: #E3F2FD; color: #1565C0; }
+    .hidden { display: none !important; }
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; margin-bottom: 8px; flex-wrap: wrap;
+    }
+    .badge {
+      font-size: 0.8rem; background: #E3F2FD; color: #1565C0;
+      padding: 6px 12px; border-radius: 999px; font-weight: 600;
+    }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+    .list { margin-top: 12px; font-size: 0.85rem; color: #455A64; }
+    .list li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Login -->
+    <div class="card" id="loginCard">
+      <h1>Admin login</h1>
+      <p class="sub">Sign in with an admin or superadmin account to upload places from the browser.</p>
+      <form id="loginForm">
+        <label for="email">Email (username)</label>
+        <input id="email" type="email" required autocomplete="username" />
+        <label for="password">Password</label>
+        <input id="password" type="password" required autocomplete="current-password" />
+        <div class="row">
+          <button type="submit" id="loginBtn">Log in</button>
+        </div>
+      </form>
+      <div id="loginMsg" class="msg"></div>
+    </div>
+
+    <!-- Uploader -->
+    <div class="card hidden" id="uploadCard">
+      <div class="topbar">
+        <div>
+          <h1>Add place</h1>
+          <p class="sub" style="margin:0">Submit as many places as you need. Click Log out when finished.</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="badge" id="whoBadge">—</span>
+          <button type="button" class="danger" id="logoutBtn" style="padding:10px 14px;font-size:0.9rem">Log out</button>
+        </div>
+      </div>
+
+      <form id="placeForm">
+        <label for="name">Name *</label>
+        <input id="name" required />
+
+        <label for="shortDescription">Short description</label>
+        <input id="shortDescription" maxlength="200" />
+
+        <label for="description">Full description</label>
+        <textarea id="description"></textarea>
+
+        <div class="grid2">
+          <div>
+            <label for="city">City</label>
+            <input id="city" />
+          </div>
+          <div>
+            <label for="state">State</label>
+            <input id="state" />
+          </div>
+        </div>
+        <div class="grid2">
+          <div>
+            <label for="country">Country</label>
+            <input id="country" value="India" />
+          </div>
+          <div>
+            <label for="location">Location / address</label>
+            <input id="location" />
+          </div>
+        </div>
+
+        <label for="imageUrl">Image URL</label>
+        <input id="imageUrl" type="url" placeholder="https://..." />
+
+        <div class="row">
+          <button type="submit" id="saveBtn">Save place</button>
+          <button type="button" class="secondary" id="clearBtn">Clear form</button>
+        </div>
+      </form>
+      <div id="placeMsg" class="msg"></div>
+      <ul class="list" id="recentList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const API = ""; // same origin
+    const KEY_ACCESS = "travira_admin_access";
+    const KEY_REFRESH = "travira_admin_refresh";
+    const KEY_USER = "travira_admin_user";
+
+    const loginCard = document.getElementById("loginCard");
+    const uploadCard = document.getElementById("uploadCard");
+    const loginMsg = document.getElementById("loginMsg");
+    const placeMsg = document.getElementById("placeMsg");
+    const whoBadge = document.getElementById("whoBadge");
+    const recentList = document.getElementById("recentList");
+    const recent = [];
+
+    function showMsg(el, type, text) {
+      el.className = "msg " + type;
+      el.textContent = text;
+    }
+
+    function getAccess() { return sessionStorage.getItem(KEY_ACCESS) || ""; }
+    function getRefresh() { return sessionStorage.getItem(KEY_REFRESH) || ""; }
+
+    function setSession(access, refresh, user) {
+      sessionStorage.setItem(KEY_ACCESS, access || "");
+      sessionStorage.setItem(KEY_REFRESH, refresh || "");
+      sessionStorage.setItem(KEY_USER, JSON.stringify(user || {}));
+    }
+
+    function clearSession() {
+      sessionStorage.removeItem(KEY_ACCESS);
+      sessionStorage.removeItem(KEY_REFRESH);
+      sessionStorage.removeItem(KEY_USER);
+    }
+
+    function showLogin() {
+      loginCard.classList.remove("hidden");
+      uploadCard.classList.add("hidden");
+    }
+
+    function showUploader(user) {
+      loginCard.classList.add("hidden");
+      uploadCard.classList.remove("hidden");
+      whoBadge.textContent = (user.name || user.email || "Admin") + " · " + (user.role || "admin");
+    }
+
+    async function api(path, options = {}) {
+      const headers = Object.assign({ "Content-Type": "application/json" }, options.headers || {});
+      if (options.auth) {
+        headers.Authorization = "Bearer " + getAccess();
+      }
+      const res = await fetch(API + path, { ...options, headers });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err = new Error(data.message || ("HTTP " + res.status));
+        err.status = res.status;
+        err.data = data;
+        throw err;
+      }
+      return data;
+    }
+
+    // Restore session
+    (function init() {
+      const access = getAccess();
+      const raw = sessionStorage.getItem(KEY_USER);
+      if (access && raw) {
+        try {
+          const user = JSON.parse(raw);
+          if (user.role === "admin" || user.role === "superadmin") {
+            showUploader(user);
+            return;
+          }
+        } catch (_) {}
+      }
+      showLogin();
+    })();
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("loginBtn");
+      btn.disabled = true;
+      loginMsg.className = "msg";
+      try {
+        const data = await api("/api/users/login", {
+          method: "POST",
+          body: JSON.stringify({
+            email: document.getElementById("email").value.trim(),
+            password: document.getElementById("password").value
+          })
+        });
+        const role = data.user && data.user.role;
+        if (role !== "admin" && role !== "superadmin") {
+          showMsg(loginMsg, "err", "This account is not an admin.");
+          return;
+        }
+        setSession(data.accessToken, data.refreshToken, data.user);
+        document.getElementById("password").value = "";
+        showUploader(data.user);
+        showMsg(placeMsg, "info", "Logged in. You can add multiple places until you log out.");
+      } catch (err) {
+        showMsg(loginMsg, "err", err.message || "Login failed");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      try {
+        const rt = getRefresh();
+        if (getAccess()) {
+          await api("/api/users/logout", {
+            method: "POST",
+            auth: true,
+            body: JSON.stringify({ refreshToken: rt })
+          }).catch(() => {});
+        }
+      } finally {
+        clearSession();
+        showLogin();
+        showMsg(loginMsg, "ok", "Logged out.");
+      }
+    });
+
+    function clearPlaceForm() {
+      ["name", "shortDescription", "description", "city", "state", "location", "imageUrl"].forEach((id) => {
+        document.getElementById(id).value = "";
+      });
+      document.getElementById("country").value = "India";
+    }
+
+    document.getElementById("clearBtn").addEventListener("click", clearPlaceForm);
+
+    document.getElementById("placeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("saveBtn");
+      btn.disabled = true;
+      placeMsg.className = "msg";
+      const body = {
+        name: document.getElementById("name").value.trim(),
+        shortDescription: document.getElementById("shortDescription").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        city: document.getElementById("city").value.trim(),
+        state: document.getElementById("state").value.trim(),
+        country: document.getElementById("country").value.trim(),
+        location: document.getElementById("location").value.trim(),
+        imageUrl: document.getElementById("imageUrl").value.trim()
+      };
+      if (!body.name) {
+        showMsg(placeMsg, "err", "Name is required.");
+        btn.disabled = false;
+        return;
+      }
+      try {
+        const data = await api("/api/admin/places", {
+          method: "POST",
+          auth: true,
+          body: JSON.stringify(body)
+        });
+        const pname = (data.place && data.place.name) || body.name;
+        showMsg(placeMsg, "ok", "Saved: " + pname + ". Form stays open for the next place.");
+        recent.unshift(pname);
+        recentList.innerHTML = recent.slice(0, 15).map((n) => "<li>✓ " + n + "</li>").join("");
+        clearPlaceForm();
+        document.getElementById("name").focus();
+      } catch (err) {
+        if (err.status === 401) {
+          clearSession();
+          showLogin();
+          showMsg(loginMsg, "err", "Session expired. Log in again.");
+        } else {
+          showMsg(placeMsg, "err", err.message || "Could not save place");
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

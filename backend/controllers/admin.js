@@ -180,6 +180,8 @@ exports.adminUpdateUser = async (req, res) => {
     if (bio !== undefined) target.bio = bio;
     if (password && String(password).length >= 6) {
       target.password = await bcrypt.hash(String(password), 10);
+      target.refreshTokens = [];
+      target.tokenVersion = (target.tokenVersion || 0) + 1;
     }
     if (role === "admin" || role === "user") {
       target.role = role;

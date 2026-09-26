@@ -17,7 +17,11 @@ const generateAccessToken = (user) => {
     throw new Error("JWT_SECRET is not set. Add it in Render Environment variables.");
   }
   return jwt.sign(
-    { userId: user._id, email: user.email },
+    {
+      userId: user._id,
+      email: user.email,
+      tv: user.tokenVersion || 0
+    },
     secret,
     { expiresIn: "30d" }
   );
@@ -28,7 +32,11 @@ const generateRefreshToken = (user) => {
   if (!secret) {
     throw new Error("JWT_REFRESH_SECRET (or JWT_SECRET) is not set.");
   }
-  return jwt.sign({ userId: user._id }, secret, { expiresIn: "30d" });
+  return jwt.sign(
+    { userId: user._id, tv: user.tokenVersion || 0 },
+    secret,
+    { expiresIn: "30d" }
+  );
 };
 
 function pushInApp(user, title, message) {
@@ -257,9 +265,14 @@ exports.resetPassword = async (req, res) => {
     user.password = await bcrypt.hash(password, 10);
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
-    // Invalidate sessions
+    // Log out all devices: drop refresh tokens + bump tokenVersion so old access JWTs fail
     user.refreshTokens = [];
-    pushInApp(user, "Password changed", "Your password was updated successfully.");
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    pushInApp(
+      user,
+      "Password changed",
+      "Your password was updated. You were signed out on all other devices."
+    );
     await user.save();
 
     if (user.emailNotifications !== false) {
@@ -273,7 +286,8 @@ exports.resetPassword = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Password updated. You can log in with your new password."
+      message:
+        "Password updated. All other devices were signed out. Log in with your new password."
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -293,6 +307,11 @@ exports.refreshToken = async (req, res) => {
     const user = await User.findById(decoded.userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // Reject if password was reset after this refresh token was issued
+    if ((decoded.tv || 0) !== (user.tokenVersion || 0)) {
+      return res.status(403).json({ message: "Session expired. Please log in again." });
     }
 
     const exists = (user.refreshTokens || []).some((item) => item.token === refreshToken);
