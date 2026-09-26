@@ -10,7 +10,7 @@ Travira Backend — deploy checklist (Render)
    JWT_REFRESH_SECRET=...
    GEMINI_API_KEY=...          (from https://aistudio.google.com/apikey)
    GEMINI_MODEL=gemini-3.8-flash
-   APP_BASE_URL=https://travira-app.onrender.com
+   APP_BASE_URL=https://travira-app-minor.onrender.com
 
    EMAIL_HOST=smtp.gmail.com
    EMAIL_PORT=587
@@ -19,7 +19,7 @@ Travira Backend — deploy checklist (Render)
    EMAIL_FROM=Travira <pritp7675@gmail.com>
 
 4) After deploy open:
-   https://travira-app.onrender.com/api/health
+   https://travira-app-minor.onrender.com/api/health
 
    Expect:
    - "success": true

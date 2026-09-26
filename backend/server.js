@@ -69,8 +69,8 @@ app.get("/", (req, res) => res.send("🚀 Travira Backend is Running..."));
 
 /**
  * Health / status — use this after deploy to verify new code is live:
- *   GET https://travira-app.onrender.com/api/health
- *   GET https://travira-app.onrender.com/health
+ *   GET https://travira-app-minor.onrender.com/api/health
+ *   GET https://travira-app-minor.onrender.com/health
  */
 function healthHandler(req, res) {
   const emailReady = Boolean(
@@ -134,7 +134,7 @@ app.use((req, res) => res.status(404).json({ success: false, message: "API Route
  * the service idle and spin it down (free tier ~15 min).
  *
  * Env:
- *   APP_BASE_URL   e.g. https://travira-app.onrender.com  (required for self-ping)
+ *   APP_BASE_URL   e.g. https://travira-app-minor.onrender.com  (required for self-ping)
  *   KEEP_ALIVE_MS  interval in ms (default 180000 = 3 min; use 120000–300000)
  *   KEEP_ALIVE     set to "false" to disable
  */
@@ -148,7 +148,7 @@ function startSelfKeepAlive() {
     .replace(/\/$/, "");
   if (!base) {
     console.warn(
-      "⚠️  Self keep-alive skipped: set APP_BASE_URL (e.g. https://travira-app.onrender.com)"
+      "⚠️  Self keep-alive skipped: set APP_BASE_URL (e.g. https://travira-app-minor.onrender.com)"
     );
     return;
   }

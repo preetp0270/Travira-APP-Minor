@@ -2,7 +2,7 @@
  * Optional email sender for Travira.
  * Env (Render):
  *   EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, EMAIL_FROM
- *   APP_BASE_URL  e.g. https://travira-app.onrender.com
+ *   APP_BASE_URL  e.g. https://travira-app-minor.onrender.com
  *
  * If SMTP is not configured, sendMail logs and resolves without throwing
  * so auth still works offline / during local dev.
@@ -24,7 +24,11 @@ function getTransporter() {
       host,
       port: Number(process.env.EMAIL_PORT || 587),
       secure: process.env.EMAIL_SECURE === "true",
-      auth: { user, pass }
+      auth: { user, pass },
+      // Prevent forgot-password / login from hanging if SMTP is slow
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
     });
   } catch (e) {
     console.warn("nodemailer unavailable:", e.message);
@@ -38,7 +42,7 @@ function fromAddress() {
 }
 
 function appBaseUrl() {
-  return (process.env.APP_BASE_URL || "https://travira-app.onrender.com").replace(/\/$/, "");
+  return (process.env.APP_BASE_URL || "https://travira-app-minor.onrender.com").replace(/\/$/, "");
 }
 
 /**

@@ -118,7 +118,7 @@ private class PlaceListDeserializer : JsonDeserializer<List<Place>> {
 
 object RetrofitInstance {
 
-    const val BASE_URL = "https://travira-app.onrender.com/"
+    const val BASE_URL = "https://travira-app-minor.onrender.com/"
 
     // BASIC is faster than BODY (full payload logging slows UI-bound calls)
     private val logging = HttpLoggingInterceptor().apply {
