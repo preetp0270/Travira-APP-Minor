@@ -180,7 +180,7 @@ fun NotificationsScreen(
                                 )
                             }
                             Spacer(Modifier.size(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(Modifier = Modifier.weight(1f)) {
                                 Text(
                                     n.title,
                                     fontWeight = FontWeight.SemiBold,
