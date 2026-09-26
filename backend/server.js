@@ -66,6 +66,21 @@ const connectDB = async () => {
 };
 
 app.get("/", (req, res) => res.send("🚀 Travira Backend is Running..."));
+
+/** Lightweight keep-alive / uptime endpoints (no DB) — ping every ~10 min to reduce Render cold starts */
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: "ok",
+    service: "travira",
+    ts: Date.now(),
+    uptime: process.uptime()
+  });
+});
+app.get("/api/ping", (req, res) => {
+  res.status(200).json({ success: true, pong: true, ts: Date.now() });
+});
+
 app.use("/api/place", placeRoutes);
 app.use("/api/places", placeRoutes); // alias for older Android clients
 app.use("/api/users", userRoutes);
@@ -73,6 +88,62 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/chat", chatRoutes);
 
 app.use((req, res) => res.status(404).json({ success: false, message: "API Route Not Found" }));
+
+/**
+ * Self keep-alive: the process calls its own public URL every few minutes.
+ * That creates real inbound HTTP traffic so Render is less likely to mark
+ * the service idle and spin it down (free tier ~15 min).
+ *
+ * Env:
+ *   APP_BASE_URL   e.g. https://travira-app.onrender.com  (required for self-ping)
+ *   KEEP_ALIVE_MS  interval in ms (default 180000 = 3 min; use 120000–300000)
+ *   KEEP_ALIVE     set to "false" to disable
+ */
+function startSelfKeepAlive() {
+  if (process.env.KEEP_ALIVE === "false") {
+    console.log("⏸️  Self keep-alive disabled (KEEP_ALIVE=false)");
+    return;
+  }
+
+  const base = (process.env.APP_BASE_URL || process.env.RENDER_EXTERNAL_URL || "")
+    .replace(/\/$/, "");
+  if (!base) {
+    console.warn(
+      "⚠️  Self keep-alive skipped: set APP_BASE_URL (e.g. https://travira-app.onrender.com)"
+    );
+    return;
+  }
+
+  // Clamp 2–5 minutes (default 3)
+  let intervalMs = Number(process.env.KEEP_ALIVE_MS || 180000);
+  if (!Number.isFinite(intervalMs) || intervalMs < 120000) intervalMs = 120000;
+  if (intervalMs > 300000) intervalMs = 300000;
+
+  const url = `${base}/api/ping`;
+
+  const tick = async () => {
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: { "User-Agent": "Travira-SelfKeepAlive/1.0" },
+        signal: AbortSignal.timeout(15000)
+      });
+      console.log(`🔄 keep-alive ${res.status} ${url}`);
+    } catch (e) {
+      console.warn(`🔄 keep-alive failed: ${e.message}`);
+    }
+  };
+
+  // First ping after short delay (let listen settle), then on interval
+  setTimeout(() => {
+    tick();
+    setInterval(tick, intervalMs);
+  }, 20_000);
+
+  console.log(
+    `🔄 Self keep-alive ON → ${url} every ${Math.round(intervalMs / 1000)}s`
+  );
+}
 
 const startServer = async () => {
   try {
@@ -89,7 +160,10 @@ const startServer = async () => {
     await connectDB();
     await seedMainAdmin();
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, "0.0.0.0", () => console.log(`🚀 Server running on port ${PORT}`));
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      startSelfKeepAlive();
+    });
   } catch (error) {
     console.error("❌ Failed to start server:", error.message);
     process.exit(1);
