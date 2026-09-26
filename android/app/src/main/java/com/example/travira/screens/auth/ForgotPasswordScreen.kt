@@ -207,9 +207,16 @@ fun ForgotPasswordScreen(
                         loading = true
                         scope.launch {
                             try {
-                                val res = RetrofitInstance.authApi.forgotPassword(
-                                    ForgotPasswordRequest(email.trim())
-                                )
+                                val reqBody = ForgotPasswordRequest(email.trim())
+                                val res = try {
+                                    RetrofitInstance.authApi.forgotPassword(reqBody)
+                                } catch (first: Exception) {
+                                    try {
+                                        RetrofitInstance.authApi.forgotPasswordAlt(reqBody)
+                                    } catch (_: Exception) {
+                                        throw first
+                                    }
+                                }
                                 // Auto-fill token when server returns it (SMTP not configured)
                                 res.resetToken?.takeIf { it.isNotBlank() }?.let { token = it }
                                 success = buildString {

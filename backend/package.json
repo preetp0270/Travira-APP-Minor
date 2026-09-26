@@ -1,13 +1,13 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "travira-backend",
+  "version": "1.1.0",
+  "description": "Travira API — places, auth, chat (Gemini 3.8 Flash), email, password reset",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": [],
+  "keywords": ["travira", "express", "mongodb", "gemini"],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
@@ -23,5 +23,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

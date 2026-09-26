@@ -1,0 +1,36 @@
+Travira Backend — deploy checklist (Render)
+==========================================
+
+1) Push THIS backend folder to the GitHub repo connected to Render.
+2) Render → Manual Deploy (wait until green).
+3) Environment variables (exact names):
+
+   MONGODB_URI=...
+   JWT_SECRET=...
+   JWT_REFRESH_SECRET=...
+   GEMINI_API_KEY=...          (from https://aistudio.google.com/apikey)
+   GEMINI_MODEL=gemini-3.8-flash
+   APP_BASE_URL=https://travira-app.onrender.com
+
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USER=pritp7675@gmail.com
+   EMAIL_PASS=<Gmail App Password 16 chars>
+   EMAIL_FROM=Travira <pritp7675@gmail.com>
+
+4) After deploy open:
+   https://travira-app.onrender.com/api/health
+
+   Expect:
+   - "success": true
+   - "version": "2026-09-26-health-v2"
+   - "geminiConfigured": true
+   - "features" includes "forgot-password"
+
+5) If health still says "API Route Not Found":
+   - Wrong branch / wrong repo on Render
+   - Deploy did not include latest server.js
+   - Clear build cache and redeploy
+
+Start command:  npm start   (runs: node server.js)
+Node: >= 18

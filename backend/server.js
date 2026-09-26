@@ -67,27 +67,49 @@ const connectDB = async () => {
 
 app.get("/", (req, res) => res.send("🚀 Travira Backend is Running..."));
 
-/** Lightweight keep-alive / health (no DB) */
-app.get("/api/health", (req, res) => {
+/**
+ * Health / status — use this after deploy to verify new code is live:
+ *   GET https://travira-app.onrender.com/api/health
+ *   GET https://travira-app.onrender.com/health
+ */
+function healthHandler(req, res) {
+  const emailReady = Boolean(
+    process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS
+  );
   res.status(200).json({
     success: true,
     status: "ok",
     service: "travira",
+    version: "2026-09-26-health-v2",
     ts: Date.now(),
     uptime: process.uptime(),
+    mongoConfigured: Boolean(process.env.MONGODB_URI),
+    jwtConfigured: Boolean(process.env.JWT_SECRET),
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
     geminiModel: process.env.GEMINI_MODEL || "gemini-3.8-flash",
+    emailConfigured: emailReady,
+    emailUser: process.env.EMAIL_USER
+      ? String(process.env.EMAIL_USER).replace(/(.{2}).+(@.+)/, "$1***$2")
+      : null,
+    appBaseUrl: process.env.APP_BASE_URL || process.env.RENDER_EXTERNAL_URL || null,
     features: [
       "places",
       "users",
       "chat",
       "forgot-password",
       "reset-password",
-      "ping"
+      "ping",
+      "health"
     ]
   });
-});
+}
+
+app.get("/api/health", healthHandler);
+app.get("/health", healthHandler);
 app.get("/api/ping", (req, res) => {
+  res.status(200).json({ success: true, pong: true, ts: Date.now() });
+});
+app.get("/ping", (req, res) => {
   res.status(200).json({ success: true, pong: true, ts: Date.now() });
 });
 
