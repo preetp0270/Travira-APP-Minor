@@ -5,7 +5,7 @@
  *   GEMINI_MODEL    (optional; default is always gemini-3.8-flash)
  */
 
-const DEFAULT_MODEL = "gemini-3.8-flash";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 const TRAVEL_SYSTEM = `You are Travira AI, a friendly expert travel assistant inside the Travira app.
 

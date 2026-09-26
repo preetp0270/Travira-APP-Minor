@@ -38,30 +38,30 @@ const connectDB = async () => {
 
 app.get("/", (req, res) => res.send("🚀 Travira Backend is Running..."));
 
+const { mailStatus, verifyMail } = require("./utils/mailer");
+
 /**
  * Health / status — use this after deploy to verify new code is live:
  *   GET https://travira-app-minor.onrender.com/api/health
- *   GET https://travira-app-minor.onrender.com/health
+ *   GET https://travira-app-minor.onrender.com/api/health/email  (SMTP verify)
  */
 function healthHandler(req, res) {
-  const emailReady = Boolean(
-    process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS
-  );
+  const mail = mailStatus();
   res.status(200).json({
     success: true,
     status: "ok",
     service: "travira",
-    version: "2026-09-26-health-v2",
+    version: "2026-09-27-mail-v3",
     ts: Date.now(),
     uptime: process.uptime(),
     mongoConfigured: Boolean(process.env.MONGODB_URI),
     jwtConfigured: Boolean(process.env.JWT_SECRET),
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
     geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-    emailConfigured: emailReady,
-    emailUser: process.env.EMAIL_USER
-      ? String(process.env.EMAIL_USER).replace(/(.{2}).+(@.+)/, "$1***$2")
-      : null,
+    emailConfigured: mail.configured,
+    emailUser: mail.emailUser,
+    emailLastError: mail.lastError,
+    emailLastSuccessAt: mail.lastSuccessAt,
     appBaseUrl: process.env.APP_BASE_URL || process.env.RENDER_EXTERNAL_URL || null,
     features: [
       "places",
@@ -72,13 +72,27 @@ function healthHandler(req, res) {
       "admin-web-upload",
       "session-invalidate-on-reset",
       "ping",
-      "health"
+      "health",
+      "health-email"
     ]
   });
 }
 
 app.get("/api/health", healthHandler);
 app.get("/health", healthHandler);
+app.get("/api/health/email", async (req, res) => {
+  try {
+    const result = await verifyMail();
+    res.status(200).json({
+      success: true,
+      smtpOk: result.ok,
+      reason: result.reason || null,
+      ...mailStatus()
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
 app.get("/api/ping", (req, res) => {
   res.status(200).json({ success: true, pong: true, ts: Date.now() });
 });
