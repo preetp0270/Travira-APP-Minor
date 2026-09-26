@@ -47,13 +47,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.travira.auth.TokenManager
+import com.example.travira.remote.ApiErrorHelper
 import com.example.travira.remote.ChatHistoryTurn
 import com.example.travira.remote.ChatRequest
 import com.example.travira.remote.RetrofitInstance
 import kotlinx.coroutines.launch
 
-private val Teal = Color(0xFF1B6B63)
-private val SoftBg = Color(0xFFF5F7F6)
+private val BrandBlue = Color(0xFF1565C0)
+private val SoftBg = Color(0xFFF0F6FC)
 
 private data class UiMessage(
     val id: String,
@@ -126,21 +127,24 @@ fun AIChatScreen(
                     body = ChatRequest(message = text, history = history)
                 )
                 val reply = res.reply?.takeIf { it.isNotBlank() }
-                    ?: res.message
+                    ?: res.message?.takeIf { it.isNotBlank() }
                     ?: "Sorry, I couldn’t answer that. Try another travel question."
+                val failed = !res.success && res.reply.isNullOrBlank()
                 messages.add(
                     UiMessage(
                         id = "a-${System.currentTimeMillis()}",
-                        text = reply,
+                        text = if (failed && reply.contains("GEMINI", ignoreCase = true)) {
+                            "Chatbot is not configured on the server. Set GEMINI_API_KEY in Render environment variables."
+                        } else reply,
                         isUser = false,
-                        isError = !res.success && res.reply.isNullOrBlank()
+                        isError = failed
                     )
                 )
             } catch (e: Exception) {
                 messages.add(
                     UiMessage(
                         id = "e-${System.currentTimeMillis()}",
-                        text = e.message ?: "Network error. Please try again.",
+                        text = ApiErrorHelper.message(e),
                         isUser = false,
                         isError = true
                     )
@@ -159,19 +163,23 @@ fun AIChatScreen(
             // Keep content above system nav + Travira bottom bar (~80–100dp)
             .padding(bottom = 96.dp)
     ) {
-        // Header
+        // Glass-style header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Teal)
+                .background(
+                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        listOf(Color(0xFF0B1D2A), Color(0xFF1565C0), Color(0xFF1976D2))
+                    )
+                )
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(42.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f)),
+                    .background(Color.White.copy(alpha = 0.22f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -227,7 +235,7 @@ fun AIChatScreen(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(22.dp),
                                 strokeWidth = 2.dp,
-                                color = Teal
+                                color = BrandBlue
                             )
                         }
                     }
@@ -256,9 +264,9 @@ fun AIChatScreen(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { send() }),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Teal,
+                    focusedBorderColor = BrandBlue,
                     unfocusedBorderColor = Color(0xFFCFD8DC),
-                    cursorColor = Teal,
+                    cursorColor = BrandBlue,
                     focusedContainerColor = SoftBg,
                     unfocusedContainerColor = SoftBg
                 )
@@ -270,7 +278,7 @@ fun AIChatScreen(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(if (!sending && input.isNotBlank()) Teal else Color(0xFFB0BEC5))
+                    .background(if (!sending && input.isNotBlank()) BrandBlue else Color(0xFFB0BEC5))
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
@@ -303,7 +311,7 @@ private fun MessageBubble(msg: UiMessage) {
                 .background(
                     when {
                         msg.isError -> Color(0xFFFFEBEE)
-                        isUser -> Teal
+                        isUser -> BrandBlue
                         else -> Color.White
                     }
                 )

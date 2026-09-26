@@ -538,12 +538,12 @@ fun PlaceScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Location
+                // Single location card → opens system Maps app
                 Text(
                     text = "Location",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1A1A1A),
+                    color = Color(0xFF0D1B2A),
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
                 Spacer(Modifier.height(10.dp))
@@ -552,66 +552,73 @@ fun PlaceScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .clickable { openMaps() },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White.copy(alpha = 0.92f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        Color(0xFF90CAF9).copy(alpha = 0.55f)
+                    )
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color(0xFFE3F2FD).copy(alpha = 0.85f),
+                                        Color.White.copy(alpha = 0.95f)
+                                    )
+                                )
+                            )
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(42.dp)
+                                .size(48.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFE3F2FD)),
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(Color(0xFF1565C0), Color(0xFF42A5F5))
+                                    )
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.LocationOn,
                                 contentDescription = null,
-                                tint = Color(0xFF1976D2)
+                                tint = Color.White,
+                                modifier = Modifier.size(26.dp)
                             )
                         }
-                        Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = place.location?.takeIf { it.isNotBlank() }
                                     ?: place.locationLine.ifBlank { place.name },
                                 fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color(0xFF212121),
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF0D1B2A),
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            Spacer(Modifier.height(2.dp))
                             Text(
-                                "Tap to open in Maps",
-                                fontSize = 12.sp,
-                                color = Color(0xFF1976D2)
+                                "Open in Maps",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF1565C0)
                             )
                         }
                         Icon(
                             Icons.Default.Map,
-                            contentDescription = null,
-                            tint = Color(0xFF90CAF9)
+                            contentDescription = "Open maps",
+                            tint = Color(0xFF1565C0),
+                            modifier = Modifier.size(28.dp)
                         )
                     }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                Button(
-                    onClick = { openMaps() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
-                ) {
-                    Icon(Icons.Default.Map, contentDescription = null)
-                    Spacer(Modifier.size(8.dp))
-                    Text("Open in Google Maps", fontSize = 16.sp)
                 }
 
                 // Owner / admin quick edit bar

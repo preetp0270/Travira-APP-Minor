@@ -23,8 +23,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -32,8 +36,15 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,16 +59,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.travira.R
+import com.example.travira.auth.TokenManager
 import com.example.travira.model.User
+import com.example.travira.remote.RetrofitInstance
+import com.example.travira.remote.UpdateProfileRequest
+import kotlinx.coroutines.launch
 
 enum class ProfileSection {
-    WISHLIST, VISITED
+    WISHLIST, VISITED, NOTIFICATIONS
 }
 
 @Composable
 fun ProfileScreen(
     isLoggedIn: Boolean,
     user: User?,
+    tokenManager: TokenManager? = null,
+    themeMode: String = "system",
+    onThemeModeChange: (String) -> Unit = {},
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onSectionClick: (ProfileSection) -> Unit = {},
@@ -70,21 +88,62 @@ fun ProfileScreen(
         !bioFromUser.isNullOrBlank() -> bioFromUser
         else -> "Explore smarter. Discover deeper. Travel with confidence."
     }
-    val email = if (isLoggedIn) (user?.email ?: "") else "guest@travira.app"
     val wishlistCount = user?.wishlist?.size ?: 0
     val visitedCount = user?.visitedPlaces?.size ?: 0
+    val unreadNotifs = user?.notifications?.count { !it.read } ?: 0
 
     val scroll = rememberScrollState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var notifEnabled by remember(tokenManager?.notificationsEnabled) {
+        mutableStateOf(tokenManager?.notificationsEnabled ?: true)
+    }
+    var settingsExpanded by remember { mutableStateOf(false) }
 
     fun requireLoginThen(section: ProfileSection) {
         if (!isLoggedIn) onLoginClick() else onSectionClick(section)
     }
 
+    fun cycleTheme() {
+        val next = when (themeMode) {
+            "light" -> "dark"
+            "dark" -> "system"
+            else -> "light"
+        }
+        onThemeModeChange(next)
+        tokenManager?.themeMode = next
+    }
+
+    fun setNotifications(enabled: Boolean) {
+        notifEnabled = enabled
+        tokenManager?.notificationsEnabled = enabled
+        if (!isLoggedIn) return
+        val token = tokenManager?.accessToken ?: return
+        scope.launch {
+            try {
+                RetrofitInstance.authApi.updateProfile(
+                    bearer = "Bearer $token",
+                    body = UpdateProfileRequest(
+                        emailNotifications = enabled,
+                        inAppNotifications = enabled
+                    )
+                )
+            } catch (_: Exception) {
+                // Local preference still applied
+            }
+        }
+    }
+
+    val bg = if (themeMode == "dark") Color(0xFF0B1D2A) else Color(0xFFF0F6FC)
+    val cardBg = if (themeMode == "dark") Color(0xFF102A43) else Color.White
+    val textPrimary = if (themeMode == "dark") Color.White else Color(0xFF1A1A1A)
+    val textSecondary = if (themeMode == "dark") Color(0xFFB0BEC5) else Color(0xFF6B6B6B)
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F7))
+            .background(bg)
             .verticalScroll(scroll)
     ) {
         Box(
@@ -141,13 +200,13 @@ fun ProfileScreen(
                 text = displayName,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A1A)
+                color = textPrimary
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = bio,
                 fontSize = 13.sp,
-                color = Color(0xFF6B6B6B),
+                color = textSecondary,
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp
             )
@@ -165,33 +224,122 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        ProfileMenuCard {
+        ProfileMenuCard(cardBg) {
             ProfileMenuItem(
                 icon = Icons.Default.Favorite,
                 title = "Wishlist",
                 trailing = if (wishlistCount > 0) wishlistCount.toString() else null,
-                onClick = { requireLoginThen(ProfileSection.WISHLIST) }
+                onClick = { requireLoginThen(ProfileSection.WISHLIST) },
+                textPrimary = textPrimary
             )
             MenuDivider()
             ProfileMenuItem(
                 icon = Icons.Default.TravelExplore,
                 title = "Visited Places",
                 trailing = if (visitedCount > 0) visitedCount.toString() else null,
-                onClick = { requireLoginThen(ProfileSection.VISITED) }
+                onClick = { requireLoginThen(ProfileSection.VISITED) },
+                textPrimary = textPrimary
+            )
+            MenuDivider()
+            ProfileMenuItem(
+                icon = Icons.Default.Notifications,
+                title = "Notifications",
+                trailing = if (unreadNotifs > 0) unreadNotifs.toString() else null,
+                onClick = { requireLoginThen(ProfileSection.NOTIFICATIONS) },
+                textPrimary = textPrimary
             )
             if (isLoggedIn) {
                 MenuDivider()
                 ProfileMenuItem(
                     icon = Icons.Default.Logout,
                     title = "Logout",
-                    onClick = onLogoutClick
+                    onClick = onLogoutClick,
+                    textPrimary = textPrimary
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        ProfileMenuCard {
+        // Settings (in-app: notifications + theme — not email)
+        ProfileMenuCard(cardBg) {
+            ProfileMenuItem(
+                icon = Icons.Default.Settings,
+                title = "Settings",
+                subtitle = if (settingsExpanded) "Tap to collapse" else "Theme & notification prefs",
+                onClick = { settingsExpanded = !settingsExpanded },
+                textPrimary = textPrimary
+            )
+            if (settingsExpanded) {
+                MenuDivider()
+                // Notifications toggle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEEF5FF)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = Color(0xFF1565C0),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Notifications",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = textPrimary
+                        )
+                        Text(
+                            "Login alerts & in-app updates",
+                            fontSize = 12.sp,
+                            color = textSecondary
+                        )
+                    }
+                    Switch(
+                        checked = notifEnabled,
+                        onCheckedChange = { setNotifications(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedTrackColor = Color(0xFF1565C0),
+                            checkedThumbColor = Color.White
+                        )
+                    )
+                }
+                MenuDivider()
+                // Theme cycle
+                val themeLabel = when (themeMode) {
+                    "light" -> "Light"
+                    "dark" -> "Dark"
+                    else -> "System"
+                }
+                val themeIcon = when (themeMode) {
+                    "dark" -> Icons.Default.DarkMode
+                    else -> Icons.Default.LightMode
+                }
+                ProfileMenuItem(
+                    icon = themeIcon,
+                    title = "Appearance",
+                    subtitle = "$themeLabel · tap to change",
+                    onClick = { cycleTheme() },
+                    textPrimary = textPrimary
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ProfileMenuCard(cardBg) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -235,13 +383,13 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileMenuCard(content: @Composable () -> Unit) {
+private fun ProfileMenuCard(container: Color, content: @Composable () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = container),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) { content() }
@@ -254,7 +402,8 @@ private fun ProfileMenuItem(
     title: String,
     subtitle: String? = null,
     trailing: String? = null,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    textPrimary: Color = Color(0xFF212121)
 ) {
     Row(
         modifier = Modifier
@@ -274,7 +423,7 @@ private fun ProfileMenuItem(
         }
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Color(0xFF212121))
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = textPrimary)
             if (subtitle != null) {
                 Text(subtitle, fontSize = 12.sp, color = Color(0xFF9E9E9E))
             }
@@ -317,12 +466,13 @@ private fun SocialIcon(label: String, color: Color, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = color)
+        Text(label, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)
     }
 }
 
 private fun openUrl(context: android.content.Context, url: String) {
     try {
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    } catch (_: Exception) { }
+    } catch (_: Exception) {
+    }
 }

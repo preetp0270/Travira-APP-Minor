@@ -17,12 +17,16 @@ const {
   markNotificationsRead,
   getVisitedPlaces,
   addVisitedPlace,
-  removeVisitedPlace
+  removeVisitedPlace,
+  forgotPassword,
+  resetPassword
 } = require("../controllers/user");
 
 router.post("/register", register);
 router.post("/login", login);
 router.post("/refresh-token", refreshToken);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 router.get("/profile", authMiddleware, profile);
 router.put("/profile", authMiddleware, updateProfile);

@@ -28,4 +28,6 @@ data class NotificationItem(
     val message: String = "",
     val read: Boolean = false,
     val createdAt: String? = null
-)
+) {
+    val id: String get() = _id.orEmpty()
+}

@@ -62,14 +62,14 @@ fun TraviraBottomBar(
                     shape = RoundedCornerShape(50.dp)
                 ),
             shape = RoundedCornerShape(50.dp),
-            color = Color(0xFF90CAF9).copy(alpha = 0.50f),
+            color = Color(0xFF1565C0).copy(alpha = 0.28f),
             tonalElevation = 0.dp
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        Color.White.copy(alpha = 0.15f),
+                        Color.White.copy(alpha = 0.55f),
                         RoundedCornerShape(50.dp)
                     )
                     .padding(horizontal = 12.dp),
@@ -82,11 +82,9 @@ fun TraviraBottomBar(
                         targetValue = if (selected) 30.dp else 25.dp,
                         label = ""
                     )
+                    val brandBlue = Color(0xFF1565C0)
                     val iconColor by animateColorAsState(
-                        targetValue = if (selected)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            Color.Gray,
+                        targetValue = if (selected) brandBlue else Color(0xFF78909C),
                         label = ""
                     )
 
@@ -95,7 +93,7 @@ fun TraviraBottomBar(
                             .size(48.dp)
                             .background(
                                 color = if (selected)
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    brandBlue.copy(alpha = 0.18f)
                                 else
                                     Color.Transparent,
                                 shape = CircleShape

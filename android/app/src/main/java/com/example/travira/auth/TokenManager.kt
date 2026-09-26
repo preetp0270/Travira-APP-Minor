@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * Persists access + refresh tokens and basic user info
- * (like cookies / session on the web).
+ * Persists access + refresh tokens, user info, and app preferences
+ * (theme + local notification preference mirror).
  */
 class TokenManager(context: Context) {
 
@@ -36,6 +36,15 @@ class TokenManager(context: Context) {
         get() = prefs.getString(KEY_USER_ROLE, null)
         set(value) = prefs.edit().putString(KEY_USER_ROLE, value).apply()
 
+    /** "system" | "light" | "dark" */
+    var themeMode: String
+        get() = prefs.getString(KEY_THEME, "system") ?: "system"
+        set(value) = prefs.edit().putString(KEY_THEME, value).apply()
+
+    var notificationsEnabled: Boolean
+        get() = prefs.getBoolean(KEY_NOTIF, true)
+        set(value) = prefs.edit().putBoolean(KEY_NOTIF, value).apply()
+
     val isLoggedIn: Boolean
         get() = !accessToken.isNullOrBlank() || !refreshToken.isNullOrBlank()
 
@@ -64,7 +73,12 @@ class TokenManager(context: Context) {
     }
 
     fun clear() {
+        val theme = themeMode
+        val notif = notificationsEnabled
         prefs.edit().clear().apply()
+        // Keep device preferences after logout
+        themeMode = theme
+        notificationsEnabled = notif
     }
 
     companion object {
@@ -75,5 +89,7 @@ class TokenManager(context: Context) {
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_ROLE = "user_role"
+        private const val KEY_THEME = "theme_mode"
+        private const val KEY_NOTIF = "notifications_enabled"
     }
 }

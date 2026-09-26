@@ -26,14 +26,17 @@ import com.example.travira.auth.TokenManager
 import com.example.travira.components.TraviraBottomBar
 import com.example.travira.model.Place
 import com.example.travira.model.User
+import com.example.travira.remote.ApiErrorHelper
 import com.example.travira.remote.RefreshRequest
 import com.example.travira.remote.RetrofitInstance
 import com.example.travira.screens.ai.AIChatScreen
+import com.example.travira.screens.auth.ForgotPasswordScreen
 import com.example.travira.screens.auth.LoginScreen
 import com.example.travira.screens.home.HomeScreen
 import com.example.travira.screens.places.AddPlaceScreen
 import com.example.travira.screens.places.EditPlaceScreen
 import com.example.travira.screens.places.PlaceScreen
+import com.example.travira.screens.profile.NotificationsScreen
 import com.example.travira.screens.profile.ProfileScreen
 import com.example.travira.screens.profile.ProfileSection
 import com.example.travira.screens.profile.VisitedPlacesScreen
@@ -59,8 +62,21 @@ class MainActivity : ComponentActivity() {
                     )
 
         setContent {
-            TraviraTheme {
-                TraviraRoot()
+            val tokenManager = remember { TokenManager(this) }
+            var themeMode by remember { mutableStateOf(tokenManager.themeMode) }
+            val darkTheme = when (themeMode) {
+                "dark" -> true
+                "light" -> false
+                else -> androidx.compose.foundation.isSystemInDarkTheme()
+            }
+            TraviraTheme(darkTheme = darkTheme) {
+                TraviraRoot(
+                    themeMode = themeMode,
+                    onThemeModeChange = {
+                        themeMode = it
+                        tokenManager.themeMode = it
+                    }
+                )
             }
         }
     }
@@ -72,7 +88,10 @@ enum class PendingAction {
 }
 
 @Composable
-fun TraviraRoot() {
+fun TraviraRoot(
+    themeMode: String = "system",
+    onThemeModeChange: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     val tokenManager = remember { TokenManager(context) }
 
@@ -88,7 +107,7 @@ fun TraviraRoot() {
             Log.d("TRAVIRA_API", "PREFETCH PLACES: ${response.data.size}")
         } catch (e: Exception) {
             Log.e("TRAVIRA_API", "Prefetch error: ${e.message}")
-            prefetchError = e.message
+            prefetchError = ApiErrorHelper.message(e)
         }
     }
 
@@ -98,7 +117,9 @@ fun TraviraRoot() {
         else -> TraviraApp(
             tokenManager = tokenManager,
             initialPlaces = prefetchedPlaces,
-            initialError = prefetchError
+            initialError = prefetchError,
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange
         )
     }
 }
@@ -107,7 +128,9 @@ fun TraviraRoot() {
 fun TraviraApp(
     tokenManager: TokenManager,
     initialPlaces: List<Place> = emptyList(),
-    initialError: String? = null
+    initialError: String? = null,
+    themeMode: String = "system",
+    onThemeModeChange: (String) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
 
@@ -122,6 +145,7 @@ fun TraviraApp(
     var currentUser by remember { mutableStateOf<User?>(null) }
 
     var showLogin by remember { mutableStateOf(false) }
+    var showForgotPassword by remember { mutableStateOf(false) }
     var showAddPlace by remember { mutableStateOf(false) }
     var editingPlace by remember { mutableStateOf<Place?>(null) }
     var pendingAction by remember { mutableStateOf(PendingAction.NONE) }
@@ -173,7 +197,7 @@ fun TraviraApp(
             Log.d("TRAVIRA_API", "TOTAL PLACES: ${response.data.size}")
         } catch (e: Exception) {
             Log.e("TRAVIRA_API", e.message ?: "API ERROR")
-            errorMessage = e.message ?: "Failed to load places"
+            errorMessage = ApiErrorHelper.message(e)
         } finally {
             isLoading = false
         }
@@ -211,6 +235,13 @@ fun TraviraApp(
 
     when {
 
+        showForgotPassword -> {
+            BackHandler { showForgotPassword = false }
+            ForgotPasswordScreen(
+                onBack = { showForgotPassword = false }
+            )
+        }
+
         showLogin -> {
             BackHandler {
                 Log.d("TRAVIRA_AUTH", "LoginScreen system BackHandler fired → closing login")
@@ -224,6 +255,10 @@ fun TraviraApp(
                     Log.d("TRAVIRA_AUTH", "LoginScreen onBack callback → closing login, pendingAction was $pendingAction")
                     showLogin = false
                     pendingAction = PendingAction.NONE
+                },
+                onForgotPassword = {
+                    showLogin = false
+                    showForgotPassword = true
                 }
             )
         }
@@ -307,6 +342,16 @@ fun TraviraApp(
             )
         }
 
+        profileSection == ProfileSection.NOTIFICATIONS -> {
+            BackHandler { profileSection = null }
+            NotificationsScreen(
+                tokenManager = tokenManager,
+                onBack = {
+                    profileSection = null
+                    refreshUser()
+                }
+            )
+        }
 
         else -> {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -357,6 +402,9 @@ fun TraviraApp(
                                 name = tokenManager.userName ?: "Traveler",
                                 email = tokenManager.userEmail ?: ""
                             ) else null,
+                            tokenManager = tokenManager,
+                            themeMode = themeMode,
+                            onThemeModeChange = onThemeModeChange,
                             onLoginClick = {
                                 pendingAction = PendingAction.NONE
                                 showLogin = true

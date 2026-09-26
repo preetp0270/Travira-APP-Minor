@@ -16,6 +16,12 @@ interface AuthApi {
     @POST("api/users/login")
     suspend fun login(@Body body: LoginRequest): LoginResponse
 
+    @POST("api/users/forgot-password")
+    suspend fun forgotPassword(@Body body: ForgotPasswordRequest): SimpleMessageResponse
+
+    @POST("api/users/reset-password")
+    suspend fun resetPassword(@Body body: ResetPasswordRequest): SimpleMessageResponse
+
     @POST("api/users/refresh-token")
     suspend fun refreshToken(@Body body: RefreshRequest): RefreshResponse
 

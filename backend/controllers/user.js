@@ -1,454 +1,310 @@
+const crypto = require("crypto");
 const User = require("../models/user");
 const Place = require("../models/place");
-
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const {
+  sendMail,
+  appBaseUrl,
+  welcomeHtml,
+  loginAlertHtml,
+  resetPasswordHtml
+} = require("../utils/mailer");
 
-
-
-
-// Generate Access Token
-
-const generateAccessToken = (user)=>{
-
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-        throw new Error("JWT_SECRET is not set. Add it in Render Environment variables.");
-    }
-
-    return jwt.sign(
-
-        {
-            userId:user._id,
-            email:user.email
-        },
-
-        secret,
-
-        {
-            expiresIn:"30d"
-        }
-
-    );
-
+const generateAccessToken = (user) => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not set. Add it in Render Environment variables.");
+  }
+  return jwt.sign(
+    { userId: user._id, email: user.email },
+    secret,
+    { expiresIn: "30d" }
+  );
 };
 
-
-
-
-
-// Generate Refresh Token
-
-const generateRefreshToken = (user)=>{
-
-    const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
-    if (!secret) {
-        throw new Error("JWT_REFRESH_SECRET (or JWT_SECRET) is not set. Add it in Render Environment variables.");
-    }
-
-    return jwt.sign(
-
-        {
-            userId:user._id
-        },
-
-        secret,
-
-        {
-            expiresIn:"30d"
-        }
-
-    );
-
+const generateRefreshToken = (user) => {
+  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_REFRESH_SECRET (or JWT_SECRET) is not set.");
+  }
+  return jwt.sign({ userId: user._id }, secret, { expiresIn: "30d" });
 };
 
-
-
-
-
-
+function pushInApp(user, title, message) {
+  if (user.inAppNotifications === false) return;
+  user.notifications = user.notifications || [];
+  user.notifications.unshift({
+    title,
+    message,
+    read: false,
+    createdAt: new Date()
+  });
+  // Keep last 50
+  if (user.notifications.length > 50) {
+    user.notifications = user.notifications.slice(0, 50);
+  }
+}
 
 // ================= Register =================
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body || {};
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email and password are required" });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
 
+    const existingUser = await User.findOne({ email: String(email).trim().toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
 
-exports.register = async(req,res)=>{
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      name: String(name).trim(),
+      email: String(email).trim().toLowerCase(),
+      password: hashedPassword
+    });
 
-try{
+    pushInApp(
+      user,
+      "Welcome to Travira",
+      "Your account was created successfully. Explore places and try Travira AI."
+    );
+    await user.save();
 
+    // Fire-and-forget welcome email
+    if (user.emailNotifications !== false) {
+      sendMail({
+        to: user.email,
+        subject: "Welcome to Travira ✈️",
+        html: welcomeHtml(user.name),
+        text: `Hi ${user.name}, welcome to Travira! Your account is ready.`
+      }).catch(() => {});
+    }
 
-const {
-name,
-email,
-password
-}=req.body;
-
-
-
-const existingUser =
-await User.findOne({email});
-
-
-
-if(existingUser){
-
-return res.status(400).json({
-
-message:"User already exists"
-
-});
-
-}
-
-
-
-
-const hashedPassword =
-await bcrypt.hash(password,10);
-
-
-
-const user =
-await User.create({
-
-name,
-email,
-password:hashedPassword
-
-});
-
-
-
-
-res.json({
-
-message:"Registration successful",
-
-user:{
-
-id:user._id,
-
-name:user.name,
-
-email:user.email
-
-}
-
-});
-
-
-
-}catch(error){
-
-res.status(500).json({
-
-message:error.message
-
-});
-
-}
-
-
+    res.json({
+      message: "Registration successful",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
-
-
-
-
-
-
-
-
-
 
 // ================= Login =================
-
-
-exports.login = async(req,res)=>{
-
-try{
-
-
-const {
-email,
-password
-}=req.body;
-
-
-
-const user =
-await User.findOne({email});
-
-
-
-if(!user){
-
-return res.status(404).json({
-
-message:"User not found"
-
-});
-
-}
-
-
-
-
-const match =
-await bcrypt.compare(
-
-password,
-
-user.password
-
-);
-
-
-
-if(!match){
-
-return res.status(400).json({
-
-message:"Invalid password"
-
-});
-
-}
-
-
-
-
-const accessToken =
-generateAccessToken(user);
-
-
-
-const refreshToken =
-generateRefreshToken(user);
-
-
-
-
-user.refreshTokens.push({
-
-token:refreshToken
-
-});
-
-
-await user.save();
-
-
-
-
-res.json({
-
-message:"Login successful",
-
-accessToken,
-
-refreshToken,
-
-
-user:{
-
-id:user._id,
-
-name:user.name,
-
-email:user.email,
-
-role:user.role,
-
-phone:user.phone || "",
-
-location:user.location || ""
-
-}
-
-});
-
-
-
-}catch(error){
-
-res.status(500).json({
-
-message:error.message
-
-});
-
-}
-
-
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    const user = await User.findOne({ email: String(email).trim().toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(400).json({ message: "Invalid password" });
+    }
+
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshTokens = user.refreshTokens || [];
+    user.refreshTokens.push({ token: refreshToken });
+
+    const when = new Date().toUTCString();
+    pushInApp(
+      user,
+      "New login",
+      `You signed in on ${when}. If this wasn't you, reset your password.`
+    );
+    await user.save();
+
+    if (user.emailNotifications !== false) {
+      sendMail({
+        to: user.email,
+        subject: "Travira — new login alert",
+        html: loginAlertHtml(user.name, when),
+        text: `Hi ${user.name}, someone signed in to Travira at ${when}.`
+      }).catch(() => {});
+    }
+
+    res.json({
+      message: "Login successful",
+      accessToken,
+      refreshToken,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone || "",
+        location: user.location || ""
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
+// ================= Forgot password =================
+exports.forgotPassword = async (req, res) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
 
+    const user = await User.findOne({ email });
+    // Always respond success to avoid email enumeration
+    if (!user) {
+      return res.json({
+        success: true,
+        message: "If that email is registered, a reset link has been sent."
+      });
+    }
 
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = crypto.createHash("sha256").update(token).digest("hex");
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
 
+    const link = `${appBaseUrl()}/reset-password.html?token=${token}`;
+    const mailResult = await sendMail({
+      to: user.email,
+      subject: "Travira — reset your password",
+      html: resetPasswordHtml(user.name, link),
+      text: `Reset your Travira password: ${link}`
+    });
 
+    pushInApp(
+      user,
+      "Password reset requested",
+      "A password reset link was sent to your email (valid 1 hour)."
+    );
+    await user.save();
 
+    res.json({
+      success: true,
+      message: mailResult.sent
+        ? "Reset link sent to your email. Check inbox (and spam)."
+        : "Reset link prepared. Email SMTP is not configured on the server — ask admin to set EMAIL_* env vars. For testing, use the token from server logs if available.",
+      emailSent: !!mailResult.sent
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
+// ================= Reset password =================
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, password, confirmPassword } = req.body || {};
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Token and new password are required"
+      });
+    }
+    if (confirmPassword !== undefined && password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Password and confirm password do not match"
+      });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters"
+      });
+    }
 
+    const hashedToken = crypto.createHash("sha256").update(String(token)).digest("hex");
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset link is invalid or has expired. Request a new one."
+      });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    // Invalidate sessions
+    user.refreshTokens = [];
+    pushInApp(user, "Password changed", "Your password was updated successfully.");
+    await user.save();
+
+    if (user.emailNotifications !== false) {
+      sendMail({
+        to: user.email,
+        subject: "Travira — password changed",
+        html: `<p>Hi ${user.name}, your Travira password was changed. If this wasn't you, contact support.</p>`,
+        text: `Hi ${user.name}, your Travira password was changed.`
+      }).catch(() => {});
+    }
+
+    res.json({
+      success: true,
+      message: "Password updated. You can log in with your new password."
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 // ================= Refresh Token =================
+exports.refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body || {};
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Refresh token required" });
+    }
 
+    const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+    const decoded = jwt.verify(refreshToken, secret);
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-exports.refreshToken = async(req,res)=>{
+    const exists = (user.refreshTokens || []).some((item) => item.token === refreshToken);
+    if (!exists) {
+      return res.status(403).json({ message: "Invalid refresh token" });
+    }
 
-try{
-
-
-const {
-refreshToken
-}=req.body;
-
-
-
-if(!refreshToken){
-
-return res.status(401).json({
-
-message:"Refresh token required"
-
-});
-
-}
-
-
-
-
-const decoded =
-jwt.verify(
-
-refreshToken,
-
-process.env.JWT_REFRESH_SECRET
-
-);
-
-
-
-const user =
-await User.findById(
-decoded.userId
-);
-
-
-
-if(!user){
-
-return res.status(404).json({
-
-message:"User not found"
-
-});
-
-}
-
-
-
-
-const exists =
-user.refreshTokens.some(
-
-item=>item.token===refreshToken
-
-);
-
-
-
-if(!exists){
-
-return res.status(403).json({
-
-message:"Invalid refresh token"
-
-});
-
-}
-
-
-
-
-const accessToken =
-generateAccessToken(user);
-
-
-
-res.json({
-
-accessToken
-
-});
-
-
-
-}catch(error){
-
-res.status(403).json({
-
-message:"Invalid refresh token"
-
-});
-
-}
-
+    const accessToken = generateAccessToken(user);
+    res.json({ accessToken });
+  } catch (error) {
+    res.status(403).json({ message: "Invalid refresh token" });
+  }
 };
-
-
-
-
-
-
-
-
 
 // ================= Profile =================
-
-
-exports.profile = async(req,res)=>{
-
-try{
-
-
-const user =
-await User.findById(req.user.id)
-
-.select("-password -refreshTokens");
-
-
-
-res.json({
-
-success:true,
-
-user
-
-});
-
-
-
-}catch(error){
-
-res.status(500).json({
-
-message:error.message
-
-});
-
-}
-
+exports.profile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password -refreshTokens");
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
-
-
-
-
-
-
-
-
-
-// ================= Current User =================
-
 
 exports.getCurrentUser = async (req, res) => {
   try {
@@ -468,181 +324,60 @@ exports.getCurrentUser = async (req, res) => {
           "name shortDescription description city state country location imageUrl averageRating visitorsCount"
       });
 
-    res.json({
-      success: true,
-      user
-    });
+    res.json({ success: true, user });
   } catch (error) {
-    res.status(500).json({
-      message: error.message
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-
-
-
-
-
-
-
-
-// ================= Notifications =================
-
-
-exports.getNotifications = async(req,res)=>{
-
-try{
-
-
-const user =
-await User.findById(req.user.id)
-
-.select("notifications");
-
-
-
-res.json({
-
-success:true,
-
-notifications:user.notifications
-
-});
-
-
-
-}catch(error){
-
-res.status(500).json({
-
-success:false,
-
-message:error.message
-
-});
-
-}
-
+exports.getNotifications = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("notifications");
+    res.json({ success: true, notifications: user?.notifications || [] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
-
-
-
-
-
-
-
-
-// ================= Logout =================
-
-
-exports.logout = async(req,res)=>{
-
-try{
-
-
-const {
-refreshToken
-}=req.body;
-
-
-
-const user =
-await User.findById(req.user.id);
-
-
-
-user.refreshTokens =
-user.refreshTokens.filter(
-
-item=>item.token!==refreshToken
-
-);
-
-
-
-await user.save();
-
-
-
-res.json({
-
-success:true,
-
-message:"Logged out successfully"
-
-});
-
-
-
-}catch(error){
-
-res.status(500).json({
-
-message:error.message
-
-});
-
-}
-
+exports.logout = async (req, res) => {
+  try {
+    const { refreshToken } = req.body || {};
+    const user = await User.findById(req.user.id);
+    if (user) {
+      user.refreshTokens = (user.refreshTokens || []).filter(
+        (item) => item.token !== refreshToken
+      );
+      await user.save();
+    }
+    res.json({ success: true, message: "Logged out successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
-
-
-
-
-
-
-
-
-// ================= Logout All =================
-
-
-exports.logoutAll = async(req,res)=>{
-
-try{
-
-
-const user =
-await User.findById(req.user.id);
-
-
-
-user.refreshTokens=[];
-
-
-await user.save();
-
-
-
-res.json({
-
-success:true,
-
-message:"Logged out from all devices"
-
-});
-
-
-}catch(error){
-
-res.status(500).json({
-
-message:error.message
-
-});
-
-}
-
+exports.logoutAll = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (user) {
+      user.refreshTokens = [];
+      await user.save();
+    }
+    res.json({ success: true, message: "Logged out from all devices" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
-
-// ================= Update Profile =================
-// Profile picture / cover image edit removed — text fields only.
 
 exports.updateProfile = async (req, res) => {
   try {
-    const allowed = ["name", "phone", "location", "bio"];
+    const allowed = [
+      "name",
+      "phone",
+      "location",
+      "bio",
+      "emailNotifications",
+      "inAppNotifications"
+    ];
     const updates = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -664,13 +399,12 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-// ================= Visited Places =================
-
 exports.getVisitedPlaces = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate({
       path: "visitedPlaces.place",
-      select: "name shortDescription description city state country location imageUrl averageRating visitorsCount"
+      select:
+        "name shortDescription description city state country location imageUrl averageRating visitorsCount"
     });
 
     if (!user) {
@@ -766,8 +500,6 @@ exports.removeVisitedPlace = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
-// ================= Mark notifications read =================
 
 exports.markNotificationsRead = async (req, res) => {
   try {

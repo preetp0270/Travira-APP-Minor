@@ -1,110 +1,131 @@
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
 
-    name: {
-        type: String,
-        required: true
-    },
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
 
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },
+  password: {
+    type: String,
+    required: true
+  },
 
-    password: {
-        type: String,
-        required: true
-    },
+  phone: {
+    type: String,
+    default: ""
+  },
 
-    phone: {
-        type: String,
-        default: ""
-    },
+  location: {
+    type: String,
+    default: ""
+  },
 
-    location: {
-        type: String,
-        default: ""
-    },
+  bio: {
+    type: String,
+    default: ""
+  },
 
-    bio: {
-        type: String,
-        default: ""
-    },
+  /** Prefer email alerts for login/signup (in-app notifications always stored when enabled) */
+  emailNotifications: {
+    type: Boolean,
+    default: true
+  },
 
-    addedPlaces: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Place"
-        }
-    ],
+  /** Push-style in-app notification preference */
+  inAppNotifications: {
+    type: Boolean,
+    default: true
+  },
 
-    wishlist: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Place"
-        }
-    ],
+  resetPasswordToken: {
+    type: String,
+    default: null
+  },
 
-    visitedPlaces: [
-        {
-            place: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Place"
-            },
-            visitedAt: {
-                type: Date,
-                default: Date.now
-            }
-        }
-    ],
+  resetPasswordExpires: {
+    type: Date,
+    default: null
+  },
 
-    notifications: [
-        {
-            title: {
-                type: String,
-                required: true
-            },
-            message: {
-                type: String,
-                required: true
-            },
-            read: {
-                type: Boolean,
-                default: false
-            },
-            createdAt: {
-                type: Date,
-                default: Date.now
-            }
-        }
-    ],
+  addedPlaces: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Place"
+    }
+  ],
 
-    role: {
-        type: String,
-        enum: ["user", "admin", "superadmin"],
-        default: "user"
-    },
+  wishlist: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Place"
+    }
+  ],
 
-    refreshTokens: [
-        {
-            token: {
-                type: String,
-                required: true
-            },
-            createdAt: {
-                type: Date,
-                default: Date.now,
-                expires: 2592000
-            }
-        }
-    ],
-
-    createdAt: {
+  visitedPlaces: [
+    {
+      place: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Place"
+      },
+      visitedAt: {
         type: Date,
         default: Date.now
+      }
     }
+  ],
+
+  notifications: [
+    {
+      title: {
+        type: String,
+        required: true
+      },
+      message: {
+        type: String,
+        required: true
+      },
+      read: {
+        type: Boolean,
+        default: false
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ],
+
+  role: {
+    type: String,
+    enum: ["user", "admin", "superadmin"],
+    default: "user"
+  },
+
+  refreshTokens: [
+    {
+      token: {
+        type: String,
+        required: true
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+        expires: 2592000
+      }
+    }
+  ],
+
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
 module.exports = mongoose.model("User", userSchema);

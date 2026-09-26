@@ -1,6 +1,8 @@
 package com.example.travira.screens.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +23,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -38,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -49,8 +55,8 @@ import androidx.compose.ui.unit.sp
 import com.example.travira.components.AppCard
 import com.example.travira.model.Place
 
-private val Teal = Color(0xFF1B6B63)
-private val SoftBg = Color(0xFFF5F7F6)
+private val BrandBlue = Color(0xFF1565C0)
+private val SoftBg = Color(0xFFF0F6FC)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,9 +113,9 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    CircularProgressIndicator(color = Teal)
+                    CircularProgressIndicator(color = BrandBlue)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "Loading places...")
+                    Text(text = "Loading places...", color = Color(0xFF546E7A))
                 }
             }
 
@@ -124,17 +130,21 @@ fun HomeScreen(
                     Text(
                         text = "Could not load places",
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF0D1B2A)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = errorMessage,
                         fontSize = 13.sp,
-                        color = Color.Gray,
+                        color = Color(0xFF78909C),
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(20.dp))
-                    Button(onClick = onRetry) { Text("Retry") }
+                    Button(
+                        onClick = onRetry,
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                    ) { Text("Retry") }
                 }
             }
 
@@ -169,13 +179,19 @@ fun HomeScreen(
                                     Text(
                                         if (query.isBlank()) "No places found"
                                         else "No matches for \"$query\"",
-                                        color = Color.Gray
+                                        color = Color(0xFF78909C)
                                     )
                                     Spacer(Modifier.height(8.dp))
                                     if (query.isNotBlank()) {
-                                        Button(onClick = { query = "" }) { Text("Clear search") }
+                                        Button(
+                                            onClick = { query = "" },
+                                            colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                                        ) { Text("Clear search") }
                                     } else {
-                                        Button(onClick = onRetry) { Text("Refresh") }
+                                        Button(
+                                            onClick = onRetry,
+                                            colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+                                        ) { Text("Refresh") }
                                     }
                                 }
                             }
@@ -190,10 +206,10 @@ fun HomeScreen(
                                 ) {
                                     Text(
                                         text = if (query.isBlank()) "Trending now" else "Results",
-                                        fontSize = 24.sp,
+                                        fontSize = 22.sp,
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Serif,
-                                        color = Color(0xFF1A1A1A)
+                                        color = Color(0xFF0D1B2A)
                                     )
                                     Text(
                                         text = "${filtered.size} place${if (filtered.size == 1) "" else "s"}",
@@ -223,11 +239,10 @@ fun HomeScreen(
             }
         }
 
-        // Plus FAB — admin only (users cannot add places)
         if (isAdmin) {
             FloatingActionButton(
                 onClick = onAddClick,
-                containerColor = Teal,
+                containerColor = BrandBlue,
                 contentColor = Color.White,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -249,115 +264,149 @@ private fun HomeHeader(
     onQueryChange: (String) -> Unit,
     onRandomClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Upper body above search — gradient glass hero
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF0B1D2A),
+                            Color(0xFF0D47A1),
+                            Color(0xFF1565C0),
+                            Color(0xFF42A5F5).copy(alpha = 0.85f)
+                        )
+                    )
+                )
+                .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 22.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Hello, $displayName 👋",
-                    fontSize = 14.sp,
-                    color = Color(0xFF607D8B),
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = "Let's explore",
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Serif,
-                    color = Color(0xFF12201E),
-                    lineHeight = 30.sp
-                )
-                Text(
-                    text = "Discover places with Travira",
-                    fontSize = 12.sp,
-                    color = Teal,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
+            // Soft orb
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .align(Alignment.TopEnd)
+                    .size(120.dp)
                     .clip(CircleShape)
-                    .background(Teal),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "T",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    fontFamily = FontFamily.Serif
-                )
-            }
-        }
+                    .background(Color.White.copy(alpha = 0.12f))
+            )
 
-        Spacer(Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
-                    .padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    tint = Teal,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                BasicTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    singleLine = true,
-                    textStyle = TextStyle(
-                        fontSize = 14.sp,
-                        color = Color(0xFF263238)
-                    ),
-                    cursorBrush = SolidColor(Teal),
-                    modifier = Modifier.weight(1f),
-                    decorationBox = { inner ->
-                        if (query.isEmpty()) {
-                            Text(
-                                "Search places, cities…",
-                                color = Color(0xFFB0BEC5),
-                                fontSize = 14.sp
-                            )
-                        }
-                        inner()
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Hello, $displayName 👋",
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Let's explore",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Serif,
+                            color = Color.White,
+                            lineHeight = 32.sp
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Discover places with Travira",
+                            fontSize = 13.sp,
+                            color = Color(0xFFBBDEFB),
+                            fontWeight = FontWeight.Medium
+                        )
                     }
-                )
-            }
 
-            IconButton(
-                onClick = onRandomClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Teal)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Casino,
-                    contentDescription = "Surprise me — random place",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .shadow(10.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .border(1.5.dp, Color.White.copy(alpha = 0.55f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.TravelExplore,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(18.dp))
+
+                // Glass search row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color.White.copy(alpha = 0.22f))
+                            .border(
+                                BorderStroke(1.dp, Color.White.copy(alpha = 0.45f)),
+                                RoundedCornerShape(18.dp)
+                            )
+                            .padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        BasicTextField(
+                            value = query,
+                            onValueChange = onQueryChange,
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                fontSize = 15.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            cursorBrush = SolidColor(Color.White),
+                            modifier = Modifier.weight(1f),
+                            decorationBox = { inner ->
+                                if (query.isEmpty()) {
+                                    Text(
+                                        "Search places, cities…",
+                                        color = Color.White.copy(alpha = 0.65f),
+                                        fontSize = 14.sp
+                                    )
+                                }
+                                inner()
+                            }
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onRandomClick,
+                        modifier = Modifier
+                            .size(50.dp)
+                            .shadow(8.dp, RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Casino,
+                            contentDescription = "Surprise me — random place",
+                            tint = BrandBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
             }
         }
     }

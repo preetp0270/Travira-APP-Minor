@@ -100,7 +100,19 @@ data class UpdateProfileRequest(
     val name: String? = null,
     val phone: String? = null,
     val location: String? = null,
-    val bio: String? = null
+    val bio: String? = null,
+    val emailNotifications: Boolean? = null,
+    val inAppNotifications: Boolean? = null
+)
+
+data class ForgotPasswordRequest(
+    val email: String
+)
+
+data class ResetPasswordRequest(
+    val token: String,
+    val password: String,
+    val confirmPassword: String
 )
 
 data class MarkNotificationsReadRequest(
