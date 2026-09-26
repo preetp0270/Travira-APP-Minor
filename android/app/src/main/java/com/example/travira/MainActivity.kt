@@ -243,8 +243,9 @@ fun TraviraApp(
         }
 
         showLogin -> {
-            BackHandler {
-                Log.d("TRAVIRA_AUTH", "LoginScreen system BackHandler fired → closing login")
+            // Consume system back so Activity is NOT finished (app looked like it "closed")
+            BackHandler(enabled = true) {
+                Log.d("TRAVIRA_AUTH", "LoginScreen system Back → dismiss login only")
                 showLogin = false
                 pendingAction = PendingAction.NONE
             }
@@ -252,7 +253,7 @@ fun TraviraApp(
                 tokenManager = tokenManager,
                 onLoginSuccess = { onLoginSuccess() },
                 onBack = {
-                    Log.d("TRAVIRA_AUTH", "LoginScreen onBack callback → closing login, pendingAction was $pendingAction")
+                    Log.d("TRAVIRA_AUTH", "LoginScreen UI back → dismiss login only")
                     showLogin = false
                     pendingAction = PendingAction.NONE
                 },
@@ -354,6 +355,10 @@ fun TraviraApp(
         }
 
         else -> {
+            // On main tabs, back goes to Home first instead of exiting the app
+            BackHandler(enabled = selectedIndex != 0) {
+                selectedIndex = 0
+            }
             Box(modifier = Modifier.fillMaxSize()) {
                 when (selectedIndex) {
                     0 -> {
@@ -406,24 +411,33 @@ fun TraviraApp(
                             themeMode = themeMode,
                             onThemeModeChange = onThemeModeChange,
                             onLoginClick = {
+                                // Open login without leaving Profile tab; never finish Activity
                                 pendingAction = PendingAction.NONE
+                                showForgotPassword = false
                                 showLogin = true
                             },
                             onLogoutClick = {
-                                scope.launch {
-                                    try {
-                                        val token = tokenManager.accessToken
-                                        val rt = tokenManager.refreshToken
-                                        if (!token.isNullOrBlank() && !rt.isNullOrBlank()) {
+                                // Clear local session immediately so UI stays responsive
+                                val token = tokenManager.accessToken
+                                val rt = tokenManager.refreshToken
+                                tokenManager.clear()
+                                isLoggedIn = false
+                                currentUser = null
+                                profileSection = null
+                                showLogin = false
+                                showForgotPassword = false
+                                pendingAction = PendingAction.NONE
+                                // Best-effort server logout (ignore errors)
+                                if (!token.isNullOrBlank() && !rt.isNullOrBlank()) {
+                                    scope.launch {
+                                        try {
                                             RetrofitInstance.authApi.logout(
                                                 "Bearer $token",
                                                 RefreshRequest(rt)
                                             )
+                                        } catch (_: Exception) {
                                         }
-                                    } catch (_: Exception) { }
-                                    tokenManager.clear()
-                                    isLoggedIn = false
-                                    currentUser = null
+                                    }
                                 }
                             },
                             onSectionClick = { section -> profileSection = section },

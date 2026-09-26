@@ -110,11 +110,11 @@ fun LoginScreen(
                 )
             )
     ) {
-        // Soft glow orbs for depth
+        // Soft glow orbs for depth (use offset — negative padding can crash some Compose builds)
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 40.dp, end = (-20).dp)
+                .padding(top = 40.dp)
                 .size(180.dp)
                 .clip(CircleShape)
                 .background(Color(0xFF90CAF9).copy(alpha = 0.25f))
@@ -122,7 +122,7 @@ fun LoginScreen(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(bottom = 80.dp, start = (-40).dp)
+                .padding(bottom = 80.dp)
                 .size(220.dp)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.12f))
@@ -411,9 +411,9 @@ fun LoginScreen(
                 onBack()
             },
             modifier = Modifier
-                .padding(12.dp)
+                .padding(top = 12.dp, start = 8.dp)
                 .align(Alignment.TopStart)
-                .zIndex(1f)
+                .zIndex(2f)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.15f))
         ) {
@@ -425,3 +425,4 @@ fun LoginScreen(
         }
     }
 }
+

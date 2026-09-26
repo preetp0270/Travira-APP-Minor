@@ -73,12 +73,14 @@ class TokenManager(context: Context) {
     }
 
     fun clear() {
+        // Single atomic edit — avoid clear()+set race that can drop prefs mid-write
         val theme = themeMode
         val notif = notificationsEnabled
-        prefs.edit().clear().apply()
-        // Keep device preferences after logout
-        themeMode = theme
-        notificationsEnabled = notif
+        prefs.edit()
+            .clear()
+            .putString(KEY_THEME, theme)
+            .putBoolean(KEY_NOTIF, notif)
+            .apply()
     }
 
     companion object {
