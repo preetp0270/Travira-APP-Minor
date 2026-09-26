@@ -54,11 +54,25 @@
     @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
     .list { margin-top: 12px; font-size: 0.85rem; color: #455A64; }
     .list li { margin: 4px 0; }
+    .upload-box {
+      border: 2px dashed #90CAF9; border-radius: 16px; padding: 16px;
+      background: #F5FAFF; text-align: center;
+    }
+    .upload-box input[type="file"] { font-size: 0.9rem; }
+    .preview-wrap {
+      margin-top: 12px; display: none; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .preview-wrap.show { display: flex; }
+    .preview-wrap img {
+      width: 120px; height: 90px; object-fit: cover; border-radius: 12px;
+      border: 1px solid #B0BEC5; background: #ECEFF1;
+    }
+    .preview-meta { font-size: 0.8rem; color: #546E7A; text-align: left; word-break: break-all; }
+    .hint { font-size: 0.78rem; color: #78909C; margin-top: 6px; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <!-- Login -->
     <div class="card" id="loginCard">
       <h1>Admin login</h1>
       <p class="sub">Sign in with an admin or superadmin account to upload places from the browser.</p>
@@ -74,12 +88,11 @@
       <div id="loginMsg" class="msg"></div>
     </div>
 
-    <!-- Uploader -->
     <div class="card hidden" id="uploadCard">
       <div class="topbar">
         <div>
           <h1>Add place</h1>
-          <p class="sub" style="margin:0">Submit as many places as you need. Click Log out when finished.</p>
+          <p class="sub" style="margin:0">Images upload to Cloudinary (same as the app). Add many places, then log out.</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <span class="badge" id="whoBadge">—</span>
@@ -118,8 +131,18 @@
           </div>
         </div>
 
-        <label for="imageUrl">Image URL</label>
-        <input id="imageUrl" type="url" placeholder="https://..." />
+        <label>Place image</label>
+        <div class="upload-box">
+          <input id="imageFile" type="file" accept="image/*" />
+          <p class="hint">Pick a photo → it uploads to Cloudinary when you save. Or paste an existing URL below.</p>
+          <div class="preview-wrap" id="previewWrap">
+            <img id="previewImg" alt="Preview" />
+            <div class="preview-meta" id="previewMeta"></div>
+          </div>
+        </div>
+
+        <label for="imageUrl">Image URL (auto-filled after Cloudinary upload)</label>
+        <input id="imageUrl" type="url" placeholder="https://res.cloudinary.com/..." />
 
         <div class="row">
           <button type="submit" id="saveBtn">Save place</button>
@@ -132,7 +155,13 @@
   </div>
 
   <script>
-    const API = ""; // same origin
+    const API = "";
+    // Same Cloudinary unsigned flow as Android CloudinaryUploader.kt
+    const CLOUD_NAME = "yv3rd7a3";
+    const UPLOAD_PRESET = "travira_unsigned";
+    const CLOUDINARY_URL =
+      "https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/image/upload";
+
     const KEY_ACCESS = "travira_admin_access";
     const KEY_REFRESH = "travira_admin_refresh";
     const KEY_USER = "travira_admin_user";
@@ -143,7 +172,13 @@
     const placeMsg = document.getElementById("placeMsg");
     const whoBadge = document.getElementById("whoBadge");
     const recentList = document.getElementById("recentList");
+    const imageFile = document.getElementById("imageFile");
+    const imageUrlInput = document.getElementById("imageUrl");
+    const previewWrap = document.getElementById("previewWrap");
+    const previewImg = document.getElementById("previewImg");
+    const previewMeta = document.getElementById("previewMeta");
     const recent = [];
+    let objectUrl = null;
 
     function showMsg(el, type, text) {
       el.className = "msg " + type;
@@ -173,18 +208,22 @@
     function showUploader(user) {
       loginCard.classList.add("hidden");
       uploadCard.classList.remove("hidden");
-      whoBadge.textContent = (user.name || user.email || "Admin") + " · " + (user.role || "admin");
+      whoBadge.textContent =
+        (user.name || user.email || "Admin") + " · " + (user.role || "admin");
     }
 
     async function api(path, options = {}) {
-      const headers = Object.assign({ "Content-Type": "application/json" }, options.headers || {});
+      const headers = Object.assign(
+        { "Content-Type": "application/json" },
+        options.headers || {}
+      );
       if (options.auth) {
         headers.Authorization = "Bearer " + getAccess();
       }
       const res = await fetch(API + path, { ...options, headers });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const err = new Error(data.message || ("HTTP " + res.status));
+        const err = new Error(data.message || "HTTP " + res.status);
         err.status = res.status;
         err.data = data;
         throw err;
@@ -192,7 +231,76 @@
       return data;
     }
 
-    // Restore session
+    /** Upload file to Cloudinary (unsigned preset). Returns secure_url. */
+    async function uploadToCloudinary(file) {
+      if (!file) return "";
+      const form = new FormData();
+      form.append("file", file);
+      form.append("upload_preset", UPLOAD_PRESET);
+      form.append("folder", "travira");
+
+      const res = await fetch(CLOUDINARY_URL, { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          (data.error && (data.error.message || data.error)) ||
+          data.message ||
+          "Cloudinary upload failed (" + res.status + ")";
+        throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+      }
+      const url = data.secure_url || data.url || "";
+      if (!url) throw new Error("Upload OK but no image URL returned");
+      return url;
+    }
+
+    function setPreviewFromFile(file) {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+        objectUrl = null;
+      }
+      if (!file) {
+        previewWrap.classList.remove("show");
+        return;
+      }
+      objectUrl = URL.createObjectURL(file);
+      previewImg.src = objectUrl;
+      const mb = (file.size / (1024 * 1024)).toFixed(2);
+      previewMeta.textContent =
+        file.name + " · " + mb + " MB · will upload to Cloudinary on save";
+      previewWrap.classList.add("show");
+    }
+
+    function setPreviewFromUrl(url) {
+      if (!url) {
+        if (!imageFile.files || !imageFile.files[0]) {
+          previewWrap.classList.remove("show");
+        }
+        return;
+      }
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+        objectUrl = null;
+      }
+      previewImg.src = url;
+      previewMeta.textContent = url;
+      previewWrap.classList.add("show");
+    }
+
+    imageFile.addEventListener("change", () => {
+      const file = imageFile.files && imageFile.files[0];
+      setPreviewFromFile(file || null);
+      if (file) {
+        // Clear manual URL so save uses the new file
+        // (URL is filled after successful Cloudinary upload)
+      }
+    });
+
+    imageUrlInput.addEventListener("change", () => {
+      if (!imageFile.files || !imageFile.files[0]) {
+        setPreviewFromUrl(imageUrlInput.value.trim());
+      }
+    });
+
     (function init() {
       const access = getAccess();
       const raw = sessionStorage.getItem(KEY_USER);
@@ -229,7 +337,11 @@
         setSession(data.accessToken, data.refreshToken, data.user);
         document.getElementById("password").value = "";
         showUploader(data.user);
-        showMsg(placeMsg, "info", "Logged in. You can add multiple places until you log out.");
+        showMsg(
+          placeMsg,
+          "info",
+          "Logged in. Choose an image file or URL, then save places."
+        );
       } catch (err) {
         showMsg(loginMsg, "err", err.message || "Login failed");
       } finally {
@@ -249,16 +361,27 @@
         }
       } finally {
         clearSession();
+        clearPlaceForm();
         showLogin();
         showMsg(loginMsg, "ok", "Logged out.");
       }
     });
 
     function clearPlaceForm() {
-      ["name", "shortDescription", "description", "city", "state", "location", "imageUrl"].forEach((id) => {
-        document.getElementById(id).value = "";
-      });
+      ["name", "shortDescription", "description", "city", "state", "location", "imageUrl"].forEach(
+        (id) => {
+          document.getElementById(id).value = "";
+        }
+      );
       document.getElementById("country").value = "India";
+      imageFile.value = "";
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+        objectUrl = null;
+      }
+      previewWrap.classList.remove("show");
+      previewImg.removeAttribute("src");
+      previewMeta.textContent = "";
     }
 
     document.getElementById("clearBtn").addEventListener("click", clearPlaceForm);
@@ -268,31 +391,53 @@
       const btn = document.getElementById("saveBtn");
       btn.disabled = true;
       placeMsg.className = "msg";
-      const body = {
-        name: document.getElementById("name").value.trim(),
-        shortDescription: document.getElementById("shortDescription").value.trim(),
-        description: document.getElementById("description").value.trim(),
-        city: document.getElementById("city").value.trim(),
-        state: document.getElementById("state").value.trim(),
-        country: document.getElementById("country").value.trim(),
-        location: document.getElementById("location").value.trim(),
-        imageUrl: document.getElementById("imageUrl").value.trim()
-      };
-      if (!body.name) {
+
+      const name = document.getElementById("name").value.trim();
+      if (!name) {
         showMsg(placeMsg, "err", "Name is required.");
         btn.disabled = false;
         return;
       }
+
       try {
+        let imageUrl = imageUrlInput.value.trim();
+        const file = imageFile.files && imageFile.files[0];
+
+        if (file) {
+          showMsg(placeMsg, "info", "Uploading image to Cloudinary…");
+          imageUrl = await uploadToCloudinary(file);
+          imageUrlInput.value = imageUrl;
+          setPreviewFromUrl(imageUrl);
+        }
+
+        const body = {
+          name,
+          shortDescription: document.getElementById("shortDescription").value.trim(),
+          description: document.getElementById("description").value.trim(),
+          city: document.getElementById("city").value.trim(),
+          state: document.getElementById("state").value.trim(),
+          country: document.getElementById("country").value.trim(),
+          location: document.getElementById("location").value.trim(),
+          imageUrl
+        };
+
+        showMsg(placeMsg, "info", "Saving place…");
         const data = await api("/api/admin/places", {
           method: "POST",
           auth: true,
           body: JSON.stringify(body)
         });
         const pname = (data.place && data.place.name) || body.name;
-        showMsg(placeMsg, "ok", "Saved: " + pname + ". Form stays open for the next place.");
-        recent.unshift(pname);
-        recentList.innerHTML = recent.slice(0, 15).map((n) => "<li>✓ " + n + "</li>").join("");
+        showMsg(
+          placeMsg,
+          "ok",
+          "Saved: " + pname + (imageUrl ? " (image on Cloudinary)" : "") + ". Ready for next place."
+        );
+        recent.unshift(pname + (imageUrl ? " 🖼" : ""));
+        recentList.innerHTML = recent
+          .slice(0, 15)
+          .map((n) => "<li>✓ " + n + "</li>")
+          .join("");
         clearPlaceForm();
         document.getElementById("name").focus();
       } catch (err) {
