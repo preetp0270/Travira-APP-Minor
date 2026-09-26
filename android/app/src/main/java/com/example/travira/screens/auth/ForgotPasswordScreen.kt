@@ -169,21 +169,11 @@ fun ForgotPasswordScreen(
                                         throw first
                                     }
                                 }
-                                success = buildString {
-                                    append(
-                                        res.message
-                                            ?: "If that email is registered, a reset link was sent."
-                                    )
-                                    append(
-                                        "\n\nOpen the link in your email (check spam). " +
-                                            "After you change the password, you will be signed out on all devices."
-                                    )
-                                    // Only if SMTP is off and server returns a link for local/dev
-                                    if (!res.resetLink.isNullOrBlank()) {
-                                        append("\n\nDev link:\n")
-                                        append(res.resetLink)
-                                    }
-                                }
+                                // Never show tokens or reset URLs in the app (security).
+                                success =
+                                    "If that email is registered, a secure reset link was sent.\n\n" +
+                                        "Open the link from your email (check spam). " +
+                                        "After you change the password, you will be signed out on all devices."
                             } catch (e: Exception) {
                                 error = ApiErrorHelper.message(e)
                             } finally {

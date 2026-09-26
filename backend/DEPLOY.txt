@@ -1,36 +1,32 @@
 Travira Backend — deploy checklist (Render)
 ==========================================
 
-1) Push THIS backend folder to the GitHub repo connected to Render.
+1) Push the backend folder to the GitHub repo connected to Render.
 2) Render → Manual Deploy (wait until green).
-3) Environment variables (exact names):
+3) Environment variables:
 
    MONGODB_URI=...
    JWT_SECRET=...
    JWT_REFRESH_SECRET=...
-   GEMINI_API_KEY=...          (from https://aistudio.google.com/apikey)
-   GEMINI_MODEL=gemini-3.8-flash
+   GEMINI_API_KEY=...
+   GEMINI_MODEL=gemini-2.5-flash
    APP_BASE_URL=https://travira-app-minor.onrender.com
 
    EMAIL_HOST=smtp.gmail.com
    EMAIL_PORT=587
-   EMAIL_USER=pritp7675@gmail.com
+   EMAIL_USER=your-email@gmail.com
    EMAIL_PASS=<Gmail App Password 16 chars>
-   EMAIL_FROM=Travira <pritp7675@gmail.com>
+   EMAIL_FROM=Travira <your-email@gmail.com>
+
+   Optional: KEEP_ALIVE_MS=180000
 
 4) After deploy open:
    https://travira-app-minor.onrender.com/api/health
+   https://travira-app-minor.onrender.com/admin.html
+   https://travira-app-minor.onrender.com/reset-password.html
 
-   Expect:
-   - "success": true
-   - "version": "2026-09-26-health-v2"
-   - "geminiConfigured": true
-   - "features" includes "forgot-password"
+5) Admin login uses an existing user with role admin or superadmin
+   (e.g. him@travira.app). There is no separate root-admin seed.
 
-5) If health still says "API Route Not Found":
-   - Wrong branch / wrong repo on Render
-   - Deploy did not include latest server.js
-   - Clear build cache and redeploy
-
-Start command:  npm start   (runs: node server.js)
+Start command:  npm start
 Node: >= 18

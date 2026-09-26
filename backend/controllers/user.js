@@ -189,7 +189,8 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
 
     const link = `${appBaseUrl()}/reset-password.html?token=${token}`;
-    console.log(`[forgot-password] user=${user.email} link=${link}`);
+    // Do not log the full token/link (security)
+    console.log(`[forgot-password] requested for ${user.email} emailWillSend=${Boolean(process.env.EMAIL_HOST)}`);
 
     const mailResult = await sendMail({
       to: user.email,
@@ -203,24 +204,18 @@ exports.forgotPassword = async (req, res) => {
       "Password reset requested",
       mailResult.sent
         ? "A password reset link was sent to your email (valid 1 hour)."
-        : "Password reset started. Open the in-app form and use the token if email is not configured."
+        : "Password reset requested. If email delivery failed, try again later or contact support."
     );
     await user.save();
 
-    // If SMTP is not set, return token so the Android in-app step still works
-    const body = {
+    // Never return the raw token in API responses (security). User must use the email link.
+    res.json({
       success: true,
       message: mailResult.sent
         ? "Reset link sent to your email. Check inbox (and spam)."
-        : "Email SMTP is not configured. Use the reset token below in the app (step 2), or set EMAIL_* on Render.",
+        : "If that email is registered, a reset link will arrive shortly. Check inbox and spam.",
       emailSent: !!mailResult.sent
-    };
-    if (!mailResult.sent || process.env.EXPOSE_RESET_TOKEN === "true") {
-      body.resetToken = token;
-      body.resetLink = link;
-    }
-
-    res.json(body);
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

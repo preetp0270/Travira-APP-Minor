@@ -11,35 +11,6 @@ const userRoutes = require("./routes/user");
 const adminRoutes = require("./routes/adminRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 
-const bcrypt = require("bcrypt");
-const User = require("./models/user");
-
-async function seedMainAdmin() {
-  try {
-    const email = process.env.ROOT_ADMIN_EMAIL;
-    let user = await User.findOne({ email });
-    if (!user) {
-      const hashed = await bcrypt.hash(process.env.ROOT_ADMIN_PASSWORD, 10);
-      user = await User.create({
-        name: process.env.ROOT_ADMIN_NAME,
-        email,
-        password: hashed,
-        role: "superadmin",
-        location: "India",
-        phone: ""
-      });
-      console.log("✅ Main admin created");
-    } else if (user.role !== "superadmin") {
-      user.role = "superadmin";
-      await user.save();
-      console.log("✅ Main admin role upgraded to superadmin");
-    }
-  } catch (e) {
-    console.error("seedMainAdmin error:", e.message);
-  }
-}
-
-
 // DNS servers (helps with some Atlas SRV resolution issues when testing locally)
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
@@ -86,7 +57,7 @@ function healthHandler(req, res) {
     mongoConfigured: Boolean(process.env.MONGODB_URI),
     jwtConfigured: Boolean(process.env.JWT_SECRET),
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
-    geminiModel: process.env.GEMINI_MODEL || "gemini-3.8-flash",
+    geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
     emailConfigured: emailReady,
     emailUser: process.env.EMAIL_USER
       ? String(process.env.EMAIL_USER).replace(/(.{2}).+(@.+)/, "$1***$2")
@@ -199,7 +170,6 @@ const startServer = async () => {
     }
 
     await connectDB();
-    await seedMainAdmin();
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server running on port ${PORT}`);

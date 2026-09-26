@@ -146,8 +146,6 @@ Travira/
 │   │       │   │       ├── Theme.kt
 │   │       │   │       └── Type.kt
 │   │       │   └── res/                           # Drawables, values, mipmaps, etc.
-│   │       ├── androidTest/
-│   │       └── test/
 │   ├── build.gradle.kts
 │   ├── settings.gradle.kts
 │   └── gradle/
@@ -155,14 +153,14 @@ Travira/
 └── backend/                          # Node.js + Express API
     ├── server.js
     ├── package.json
-    ├── package-lock.json
+    ├── public/
+    │   ├── admin.html                # Browser place uploader (admin login)
+    │   └── reset-password.html       # Password reset form (email link)
     ├── controllers/
     │   ├── admin.js
     │   ├── chat.js
     │   ├── place.js
     │   └── user.js
-    ├── data/
-    │   └── samplePlaces.json
     ├── middleware/
     │   ├── adminMiddleware.js
     │   └── authMiddleware.js

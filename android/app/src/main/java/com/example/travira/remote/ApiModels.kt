@@ -135,11 +135,8 @@ data class SimpleMessageResponse(
     val visitorsCount: Int? = null,
     val averageRating: Double? = null,
     val ratingsCount: Int? = null,
-    /** Forgot-password: whether SMTP delivered the email */
-    val emailSent: Boolean? = null,
-    /** Present when SMTP is not configured (or EXPOSE_RESET_TOKEN=true) */
-    val resetToken: String? = null,
-    val resetLink: String? = null
+    /** Forgot-password: whether SMTP delivered the email (optional) */
+    val emailSent: Boolean? = null
 )
 
 data class RatePlaceRequest(
