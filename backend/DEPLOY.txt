@@ -1,32 +1,26 @@
 Travira Backend — deploy checklist (Render)
 ==========================================
 
-1) Push the backend folder to the GitHub repo connected to Render.
-2) Render → Manual Deploy (wait until green).
-3) Environment variables:
+EMAIL ON RENDER FREE TIER
+-------------------------
+Render free services BLOCK outbound SMTP (ports 25, 465, 587).
+Gmail SMTP will always "Connection timeout".
 
-   MONGODB_URI=...
-   JWT_SECRET=...
-   JWT_REFRESH_SECRET=...
-   GEMINI_API_KEY=...
-   GEMINI_MODEL=gemini-2.5-flash
-   APP_BASE_URL=https://travira-app-minor.onrender.com
+Use Resend (free tier, HTTPS API):
+  1) Sign up https://resend.com
+  2) Create API key
+  3) On Render set:
+       RESEND_API_KEY=re_xxxx
+       EMAIL_FROM=Travira <onboarding@resend.dev>
+  4) Redeploy
+  5) Test: GET /api/health/email  → smtpOk true (provider resend)
 
-   EMAIL_HOST=smtp.gmail.com
-   EMAIL_PORT=587
-   EMAIL_USER=your-email@gmail.com
-   EMAIL_PASS=<Gmail App Password 16 chars>
-   EMAIL_FROM=Travira <your-email@gmail.com>
+  Note: with onboarding@resend.dev you can only send TO your own Resend account email
+  until you verify a domain. For production, add a domain in Resend.
 
-   Optional: KEEP_ALIVE_MS=180000
+Other env:
+  MONGODB_URI, JWT_SECRET, JWT_REFRESH_SECRET
+  GEMINI_API_KEY, GEMINI_MODEL=gemini-2.5-flash
+  APP_BASE_URL=https://travira-app-minor.onrender.com
 
-4) After deploy open:
-   https://travira-app-minor.onrender.com/api/health
-   https://travira-app-minor.onrender.com/admin.html
-   https://travira-app-minor.onrender.com/reset-password.html
-
-5) Admin login uses an existing user with role admin or superadmin
-   (e.g. him@travira.app). There is no separate root-admin seed.
-
-Start command:  npm start
-Node: >= 18
+Start: npm start

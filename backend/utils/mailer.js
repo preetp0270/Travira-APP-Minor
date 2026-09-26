@@ -1,73 +1,24 @@
 /**
- * Email sender for Travira (nodemailer).
- * Render env required:
- *   EMAIL_HOST   e.g. smtp.gmail.com
- *   EMAIL_PORT   e.g. 587
- *   EMAIL_USER   full Gmail address
- *   EMAIL_PASS   Gmail App Password (16 chars, no spaces)
- *   EMAIL_FROM   e.g. Travira <you@gmail.com>
- *   APP_BASE_URL e.g. https://travira-app-minor.onrender.com
+ * Email for Travira.
+ *
+ * Render FREE tier blocks SMTP ports 25/465/587 → Gmail SMTP will timeout.
+ * Use Resend (HTTPS API) instead:
+ *   RESEND_API_KEY=re_xxxxx
+ *   EMAIL_FROM=Travira <onboarding@resend.dev>   (or your verified domain)
+ *
+ * Optional SMTP (only works on paid Render instance):
+ *   EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, EMAIL_FROM
+ *
+ * APP_BASE_URL=https://travira-app-minor.onrender.com
  */
 
 let transporter = null;
 let lastError = null;
 let lastSuccessAt = null;
-
-function envConfigured() {
-  return Boolean(
-    process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS
-  );
-}
+let lastProvider = null;
 
 function cleanPass(pass) {
-  // Gmail app passwords are often shown as "abcd efgh ijkl mnop"
   return String(pass || "").replace(/\s+/g, "");
-}
-
-function getTransporter() {
-  if (transporter) return transporter;
-  const host = String(process.env.EMAIL_HOST || "").trim();
-  const user = String(process.env.EMAIL_USER || "").trim();
-  const pass = cleanPass(process.env.EMAIL_PASS);
-  if (!host || !user || !pass) {
-    lastError = "Missing EMAIL_HOST, EMAIL_USER, or EMAIL_PASS";
-    return null;
-  }
-  try {
-    const nodemailer = require("nodemailer");
-    const port = Number(process.env.EMAIL_PORT || 587);
-    const secure = process.env.EMAIL_SECURE === "true" || port === 465;
-
-    // Prefer explicit SMTP (works for Gmail + App Password)
-    const options = {
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      connectionTimeout: 12000,
-      greetingTimeout: 12000,
-      socketTimeout: 20000,
-      tls: {
-        // Gmail on 587 uses STARTTLS
-        minVersion: "TLSv1.2"
-      }
-    };
-    if (!secure && port === 587) {
-      options.requireTLS = true;
-    }
-
-    transporter = nodemailer.createTransport(options);
-    return transporter;
-  } catch (e) {
-    lastError = e.message;
-    console.warn("nodemailer unavailable:", e.message);
-    return null;
-  }
-}
-
-function fromAddress() {
-  const from = process.env.EMAIL_FROM || process.env.EMAIL_USER;
-  return String(from || "Travira <noreply@travira.app>").trim();
 }
 
 function appBaseUrl() {
@@ -77,21 +28,111 @@ function appBaseUrl() {
   );
 }
 
+function fromAddress() {
+  return String(
+    process.env.EMAIL_FROM ||
+      process.env.EMAIL_USER ||
+      "Travira <onboarding@resend.dev>"
+  ).trim();
+}
+
+function resendConfigured() {
+  return Boolean(String(process.env.RESEND_API_KEY || "").trim());
+}
+
+function smtpConfigured() {
+  return Boolean(
+    process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS
+  );
+}
+
+function envConfigured() {
+  return resendConfigured() || smtpConfigured();
+}
+
+function getTransporter() {
+  if (transporter) return transporter;
+  const host = String(process.env.EMAIL_HOST || "").trim();
+  const user = String(process.env.EMAIL_USER || "").trim();
+  const pass = cleanPass(process.env.EMAIL_PASS);
+  if (!host || !user || !pass) {
+    return null;
+  }
+  try {
+    const nodemailer = require("nodemailer");
+    const port = Number(process.env.EMAIL_PORT || 587);
+    const secure = process.env.EMAIL_SECURE === "true" || port === 465;
+    const options = {
+      host,
+      port,
+      secure,
+      auth: { user, pass },
+      connectionTimeout: 12000,
+      greetingTimeout: 12000,
+      socketTimeout: 20000,
+      tls: { minVersion: "TLSv1.2" }
+    };
+    if (!secure && port === 587) options.requireTLS = true;
+    transporter = nodemailer.createTransport(options);
+    return transporter;
+  } catch (e) {
+    lastError = e.message;
+    console.warn("nodemailer unavailable:", e.message);
+    return null;
+  }
+}
+
 /**
- * @returns {{ sent: boolean, reason?: string }}
+ * Send via Resend HTTPS API (works on Render free tier).
+ * https://resend.com/docs/api-reference/emails/send-email
  */
-async function sendMail({ to, subject, html, text }) {
-  if (!envConfigured()) {
-    lastError = "Email not configured (set EMAIL_HOST/USER/PASS on Render)";
-    console.warn(`[mail] skipped (no SMTP). To=${to} Subject=${subject}`);
-    return { sent: false, reason: lastError };
+async function sendViaResend({ to, subject, html, text }) {
+  const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+  if (!apiKey) {
+    return { sent: false, reason: "RESEND_API_KEY not set" };
   }
 
+  const body = {
+    from: fromAddress(),
+    to: [to],
+    subject,
+    html: html || undefined,
+    text: text || subject
+  };
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(20000)
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const reason =
+      (data && data.message) ||
+      (data && data.error) ||
+      "Resend HTTP " + res.status;
+    return {
+      sent: false,
+      reason: typeof reason === "string" ? reason : JSON.stringify(reason)
+    };
+  }
+
+  return { sent: true, id: data.id };
+}
+
+async function sendViaSmtp({ to, subject, html, text }) {
   const t = getTransporter();
   if (!t) {
-    return { sent: false, reason: lastError || "Could not create mail transporter" };
+    return {
+      sent: false,
+      reason: lastError || "SMTP not configured (EMAIL_HOST/USER/PASS)"
+    };
   }
-
   try {
     const info = await t.sendMail({
       from: fromAddress(),
@@ -100,46 +141,146 @@ async function sendMail({ to, subject, html, text }) {
       html,
       text: text || subject
     });
-    lastSuccessAt = new Date().toISOString();
-    lastError = null;
-    console.log(
-      `[mail] sent to ${to}: ${subject} id=${info && info.messageId ? info.messageId : "?"}`
-    );
-    return { sent: true };
+    return { sent: true, id: info && info.messageId };
   } catch (e) {
-    lastError = e.message || String(e);
-    console.error("[mail] failed:", lastError);
-    // Reset transporter so next attempt rebuilds with current env
     transporter = null;
-    return { sent: false, reason: lastError };
+    const msg = e.message || String(e);
+    // Helpful hint when Render free blocks SMTP
+    if (/timeout|ETIMEDOUT|ECONNREFUSED|network is unreachable/i.test(msg)) {
+      return {
+        sent: false,
+        reason:
+          msg +
+          " — Render free tier blocks SMTP ports. Set RESEND_API_KEY (https://resend.com) instead."
+      };
+    }
+    return { sent: false, reason: msg };
   }
 }
 
-/** Optional SMTP verify (does not send a message). */
-async function verifyMail() {
+/**
+ * @returns {{ sent: boolean, reason?: string }}
+ */
+async function sendMail({ to, subject, html, text }) {
   if (!envConfigured()) {
-    return { ok: false, reason: "EMAIL_HOST/USER/PASS not set" };
+    lastError =
+      "No email provider. Set RESEND_API_KEY (recommended on Render free) or EMAIL_HOST/USER/PASS.";
+    console.warn(`[mail] skipped. To=${to} Subject=${subject}`);
+    return { sent: false, reason: lastError };
   }
-  const t = getTransporter();
-  if (!t) return { ok: false, reason: lastError || "no transporter" };
-  try {
-    await t.verify();
-    return { ok: true };
-  } catch (e) {
-    lastError = e.message || String(e);
-    transporter = null;
-    return { ok: false, reason: lastError };
+
+  // Prefer Resend on free hosting (HTTPS, not blocked)
+  if (resendConfigured()) {
+    lastProvider = "resend";
+    try {
+      const result = await sendViaResend({ to, subject, html, text });
+      if (result.sent) {
+        lastSuccessAt = new Date().toISOString();
+        lastError = null;
+        console.log(`[mail] resend OK to ${to}: ${subject} id=${result.id || "?"}`);
+        return { sent: true };
+      }
+      lastError = result.reason;
+      console.error("[mail] resend failed:", result.reason);
+      // Fall through to SMTP if also configured
+      if (!smtpConfigured()) {
+        return { sent: false, reason: result.reason };
+      }
+    } catch (e) {
+      lastError = e.message || String(e);
+      console.error("[mail] resend error:", lastError);
+      if (!smtpConfigured()) {
+        return { sent: false, reason: lastError };
+      }
+    }
   }
+
+  if (smtpConfigured()) {
+    lastProvider = "smtp";
+    const result = await sendViaSmtp({ to, subject, html, text });
+    if (result.sent) {
+      lastSuccessAt = new Date().toISOString();
+      lastError = null;
+      console.log(`[mail] smtp OK to ${to}: ${subject}`);
+      return { sent: true };
+    }
+    lastError = result.reason;
+    console.error("[mail] smtp failed:", result.reason);
+    return { sent: false, reason: result.reason };
+  }
+
+  return { sent: false, reason: lastError || "Email send failed" };
+}
+
+async function verifyMail() {
+  if (resendConfigured()) {
+    lastProvider = "resend";
+    try {
+      const res = await fetch("https://api.resend.com/domains", {
+        method: "GET",
+        headers: { Authorization: "Bearer " + String(process.env.RESEND_API_KEY).trim() },
+        signal: AbortSignal.timeout(15000)
+      });
+      if (res.ok || res.status === 401 || res.status === 403) {
+        // 401/403 means API reached (key may be wrong); not a network block
+        if (res.status === 401 || res.status === 403) {
+          const data = await res.json().catch(() => ({}));
+          return {
+            ok: false,
+            reason: data.message || "Resend API key rejected (check RESEND_API_KEY)"
+          };
+        }
+        return { ok: true, provider: "resend" };
+      }
+      return { ok: false, reason: "Resend HTTP " + res.status };
+    } catch (e) {
+      return { ok: false, reason: e.message || String(e) };
+    }
+  }
+
+  if (smtpConfigured()) {
+    lastProvider = "smtp";
+    const t = getTransporter();
+    if (!t) return { ok: false, reason: lastError || "no transporter" };
+    try {
+      await t.verify();
+      return { ok: true, provider: "smtp" };
+    } catch (e) {
+      transporter = null;
+      const msg = e.message || String(e);
+      if (/timeout|ETIMEDOUT|ECONNREFUSED|unreachable/i.test(msg)) {
+        return {
+          ok: false,
+          reason:
+            msg +
+            " — Render free blocks SMTP. Use RESEND_API_KEY instead of Gmail SMTP."
+        };
+      }
+      return { ok: false, reason: msg };
+    }
+  }
+
+  return {
+    ok: false,
+    reason: "Set RESEND_API_KEY (recommended) or EMAIL_HOST/USER/PASS"
+  };
 }
 
 function mailStatus() {
   return {
     configured: envConfigured(),
+    provider: resendConfigured() ? "resend" : smtpConfigured() ? "smtp" : null,
     emailUser: process.env.EMAIL_USER
       ? String(process.env.EMAIL_USER).replace(/(.{2}).+(@.+)/, "$1***$2")
-      : null,
+      : resendConfigured()
+        ? "resend"
+        : null,
     lastError: lastError || null,
-    lastSuccessAt: lastSuccessAt || null
+    lastSuccessAt: lastSuccessAt || null,
+    lastProvider: lastProvider || null,
+    note: resendConfigured()
+      ? null
+      : "Render free tier blocks SMTP. Set RESEND_API_KEY from https://resend.com"
   };
 }
 

@@ -51,7 +51,7 @@ function healthHandler(req, res) {
     success: true,
     status: "ok",
     service: "travira",
-    version: "2026-09-27-mail-v3",
+    version: "2026-09-27-mail-resend-v4",
     ts: Date.now(),
     uptime: process.uptime(),
     mongoConfigured: Boolean(process.env.MONGODB_URI),
