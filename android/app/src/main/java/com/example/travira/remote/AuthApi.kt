@@ -19,8 +19,15 @@ interface AuthApi {
     @POST("api/users/forgot-password")
     suspend fun forgotPassword(@Body body: ForgotPasswordRequest): SimpleMessageResponse
 
+    /** Alias if /api/users path is missing on an old deploy */
+    @POST("api/auth/forgot-password")
+    suspend fun forgotPasswordAlt(@Body body: ForgotPasswordRequest): SimpleMessageResponse
+
     @POST("api/users/reset-password")
     suspend fun resetPassword(@Body body: ResetPasswordRequest): SimpleMessageResponse
+
+    @POST("api/auth/reset-password")
+    suspend fun resetPasswordAlt(@Body body: ResetPasswordRequest): SimpleMessageResponse
 
     @POST("api/users/refresh-token")
     suspend fun refreshToken(@Body body: RefreshRequest): RefreshResponse

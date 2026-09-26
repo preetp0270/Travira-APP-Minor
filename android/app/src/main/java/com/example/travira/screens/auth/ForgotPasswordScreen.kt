@@ -210,8 +210,21 @@ fun ForgotPasswordScreen(
                                 val res = RetrofitInstance.authApi.forgotPassword(
                                     ForgotPasswordRequest(email.trim())
                                 )
-                                success = res.message
-                                    ?: "If that email is registered, a reset link was sent."
+                                // Auto-fill token when server returns it (SMTP not configured)
+                                res.resetToken?.takeIf { it.isNotBlank() }?.let { token = it }
+                                success = buildString {
+                                    append(
+                                        res.message
+                                            ?: "If that email is registered, a reset link was sent."
+                                    )
+                                    if (!res.resetToken.isNullOrBlank()) {
+                                        append("\n\nToken filled below — enter new password & confirm.")
+                                    }
+                                    if (!res.resetLink.isNullOrBlank()) {
+                                        append("\n\nOr open in browser:\n")
+                                        append(res.resetLink)
+                                    }
+                                }
                                 step = 1
                             } catch (e: Exception) {
                                 error = ApiErrorHelper.message(e)
@@ -235,13 +248,20 @@ fun ForgotPasswordScreen(
                         loading = true
                         scope.launch {
                             try {
-                                val res = RetrofitInstance.authApi.resetPassword(
-                                    ResetPasswordRequest(
-                                        token = token.trim(),
-                                        password = password,
-                                        confirmPassword = confirmPassword
-                                    )
+                                val resetBody = ResetPasswordRequest(
+                                    token = token.trim(),
+                                    password = password,
+                                    confirmPassword = confirmPassword
                                 )
+                                val res = try {
+                                    RetrofitInstance.authApi.resetPassword(resetBody)
+                                } catch (first: Exception) {
+                                    try {
+                                        RetrofitInstance.authApi.resetPasswordAlt(resetBody)
+                                    } catch (_: Exception) {
+                                        throw first
+                                    }
+                                }
                                 success = res.message ?: "Password updated. You can log in now."
                             } catch (e: Exception) {
                                 error = ApiErrorHelper.message(e)

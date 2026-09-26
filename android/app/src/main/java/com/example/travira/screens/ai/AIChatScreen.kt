@@ -197,7 +197,7 @@ fun AIChatScreen(
                     fontSize = 18.sp
                 )
                 Text(
-                    "Travel-only assistant · Gemini",
+                    "Travel-only assistant · Gemini 3.8 Flash",
                     color = Color.White.copy(alpha = 0.85f),
                     fontSize = 12.sp
                 )

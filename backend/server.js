@@ -67,19 +67,36 @@ const connectDB = async () => {
 
 app.get("/", (req, res) => res.send("🚀 Travira Backend is Running..."));
 
-/** Lightweight keep-alive / uptime endpoints (no DB) — ping every ~10 min to reduce Render cold starts */
+/** Lightweight keep-alive / health (no DB) */
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,
     status: "ok",
     service: "travira",
     ts: Date.now(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+    geminiModel: process.env.GEMINI_MODEL || "gemini-3.8-flash",
+    features: [
+      "places",
+      "users",
+      "chat",
+      "forgot-password",
+      "reset-password",
+      "ping"
+    ]
   });
 });
 app.get("/api/ping", (req, res) => {
   res.status(200).json({ success: true, pong: true, ts: Date.now() });
 });
+
+// Password reset mounted here too so they never 404 if router is stale
+const userController = require("./controllers/user");
+app.post("/api/users/forgot-password", userController.forgotPassword);
+app.post("/api/users/reset-password", userController.resetPassword);
+app.post("/api/auth/forgot-password", userController.forgotPassword);
+app.post("/api/auth/reset-password", userController.resetPassword);
 
 app.use("/api/place", placeRoutes);
 app.use("/api/places", placeRoutes); // alias for older Android clients
