@@ -215,24 +215,60 @@ async function sendMail({ to, subject, html, text }) {
 async function verifyMail() {
   if (resendConfigured()) {
     lastProvider = "resend";
+    const key = String(process.env.RESEND_API_KEY || "").trim();
+    // Sending-only keys cannot call /domains — that is normal and OK for Travira.
+    // We only need the key to POST /emails.
+    if (!key.startsWith("re_")) {
+      return {
+        ok: false,
+        reason: "RESEND_API_KEY should start with re_"
+      };
+    }
     try {
-      const res = await fetch("https://api.resend.com/domains", {
-        method: "GET",
-        headers: { Authorization: "Bearer " + String(process.env.RESEND_API_KEY).trim() },
+      // Lightweight reachability check against Resend API (not domains).
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + key,
+          "Content-Type": "application/json"
+        },
+        // Invalid body on purpose — we only care that the key is accepted for sending
+        body: JSON.stringify({}),
         signal: AbortSignal.timeout(15000)
       });
-      if (res.ok || res.status === 401 || res.status === 403) {
-        // 401/403 means API reached (key may be wrong); not a network block
-        if (res.status === 401 || res.status === 403) {
-          const data = await res.json().catch(() => ({}));
-          return {
-            ok: false,
-            reason: data.message || "Resend API key rejected (check RESEND_API_KEY)"
-          };
-        }
-        return { ok: true, provider: "resend" };
+      const data = await res.json().catch(() => ({}));
+      const msg = String(data.message || data.error || "");
+
+      // Missing required fields → key is valid for sending
+      if (
+        res.status === 422 ||
+        /required|validation|from|to|subject/i.test(msg)
+      ) {
+        return {
+          ok: true,
+          provider: "resend",
+          note: "API key can send emails"
+        };
       }
-      return { ok: false, reason: "Resend HTTP " + res.status };
+      // Explicit send-only restriction on other endpoints — still OK
+      if (/restricted to only send/i.test(msg)) {
+        return {
+          ok: true,
+          provider: "resend",
+          note: "Sending-only API key (correct for Travira)"
+        };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return {
+          ok: false,
+          reason: msg || "Resend API key rejected — create a new Sending key"
+        };
+      }
+      // Any other response that is not auth failure still means network + key path works
+      if (res.status < 500) {
+        return { ok: true, provider: "resend", note: msg || "Resend reachable" };
+      }
+      return { ok: false, reason: msg || "Resend HTTP " + res.status };
     } catch (e) {
       return { ok: false, reason: e.message || String(e) };
     }

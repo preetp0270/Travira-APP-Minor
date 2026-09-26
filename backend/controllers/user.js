@@ -3,13 +3,7 @@ const User = require("../models/user");
 const Place = require("../models/place");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const {
-  sendMail,
-  appBaseUrl,
-  welcomeHtml,
-  loginAlertHtml,
-  resetPasswordHtml
-} = require("../utils/mailer");
+const { sendMail, appBaseUrl, resetPasswordHtml } = require("../utils/mailer");
 
 const generateAccessToken = (user) => {
   const secret = process.env.JWT_SECRET;
@@ -83,16 +77,7 @@ exports.register = async (req, res) => {
       "Your account was created successfully. Explore places and try Travira AI."
     );
     await user.save();
-
-    // Fire-and-forget welcome email
-    if (user.emailNotifications !== false) {
-      sendMail({
-        to: user.email,
-        subject: "Welcome to Travira ✈️",
-        html: welcomeHtml(user.name),
-        text: `Hi ${user.name}, welcome to Travira! Your account is ready.`
-      }).catch(() => {});
-    }
+    // Email is only used for password reset (no welcome mail)
 
     res.json({
       message: "Registration successful",
@@ -138,15 +123,7 @@ exports.login = async (req, res) => {
       `You signed in on ${when}. If this wasn't you, reset your password.`
     );
     await user.save();
-
-    if (user.emailNotifications !== false) {
-      sendMail({
-        to: user.email,
-        subject: "Travira — new login alert",
-        html: loginAlertHtml(user.name, when),
-        text: `Hi ${user.name}, someone signed in to Travira at ${when}.`
-      }).catch(() => {});
-    }
+    // No login email — only password-reset emails are sent
 
     res.json({
       message: "Login successful",
@@ -269,15 +246,7 @@ exports.resetPassword = async (req, res) => {
       "Your password was updated. You were signed out on all other devices."
     );
     await user.save();
-
-    if (user.emailNotifications !== false) {
-      sendMail({
-        to: user.email,
-        subject: "Travira — password changed",
-        html: `<p>Hi ${user.name}, your Travira password was changed. If this wasn't you, contact support.</p>`,
-        text: `Hi ${user.name}, your Travira password was changed.`
-      }).catch(() => {});
-    }
+    // No "password changed" email — only the reset link email is sent
 
     res.json({
       success: true,
