@@ -5,6 +5,7 @@
 const Place = require("../models/place");
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
+const { visitorCountMap, withLiveStats, ratingStats } = require("../utils/placeStats");
 
 // Fields admins are allowed to set on a place (prevents overwriting ratings etc.)
 const PLACE_UPDATE_FIELDS = [
@@ -25,13 +26,17 @@ exports.getAllPlaces = async (req, res) => {
   try {
     const places = await Place.find({})
       .populate("addedBy", "name email phone location")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const visitMap = await visitorCountMap(places.map((p) => p._id));
+    const withStats = places.map((p) => withLiveStats(p, visitMap));
 
     const counts = {
       total: await Place.countDocuments({})
     };
 
-    res.json({ success: true, places, counts });
+    res.json({ success: true, places: withStats, counts });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -49,14 +54,17 @@ exports.getPlaceAdminDetail = async (req, res) => {
     }
 
     const wishlistCount = await User.countDocuments({ wishlist: place._id });
+    const visitMap = await visitorCountMap([place._id]);
+    const { averageRating, ratingsCount } = ratingStats(place.ratings);
+    const visitorsCount = visitMap[String(place._id)] || 0;
 
     res.json({
       success: true,
       place,
       stats: {
-        visitorsCount: place.visitorsCount || 0,
-        averageRating: place.averageRating || 0,
-        ratingsCount: (place.ratings || []).length,
+        visitorsCount,
+        averageRating,
+        ratingsCount,
         wishlistCount
       }
     });

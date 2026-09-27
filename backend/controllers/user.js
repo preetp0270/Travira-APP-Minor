@@ -8,6 +8,7 @@ const Place = require("../models/place");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { sendMail, appBaseUrl, resetPasswordHtml } = require("../utils/mailer");
+const { syncVisitorsCount, visitorCountMap, withLiveStats } = require("../utils/placeStats");
 
 /** Access JWT — includes tokenVersion (tv) so password reset invalidates sessions */
 const generateAccessToken = (user) => {
@@ -524,12 +525,17 @@ exports.getVisitedPlaces = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const places = (user.visitedPlaces || [])
+    const raw = (user.visitedPlaces || [])
       .filter((v) => v.place)
       .map((v) => ({
-        ...v.place.toObject(),
+        ...(v.place.toObject ? v.place.toObject() : v.place),
         visitedAt: v.visitedAt
       }));
+    const visitMap = await visitorCountMap(raw.map((p) => p._id));
+    const places = raw.map((p) => ({
+      ...withLiveStats(p, visitMap),
+      visitedAt: p.visitedAt
+    }));
 
     res.json({ success: true, places });
   } catch (error) {
@@ -555,23 +561,25 @@ exports.addVisitedPlace = async (req, res) => {
       (v) => v.place && v.place.toString() === placeId
     );
     if (exists) {
+      // Still return live count so UI stays correct
+      const visitorsCount = await syncVisitorsCount(placeId);
       return res.json({
         success: true,
         message: "Already marked as visited",
-        visitorsCount: place.visitorsCount || 0
+        visitorsCount
       });
     }
 
     user.visitedPlaces.push({ place: placeId, visitedAt: new Date() });
     await user.save();
 
-    place.visitorsCount = Math.max(0, (place.visitorsCount || 0) + 1);
-    await place.save();
+    // Source of truth = number of users with this place in visitedPlaces
+    const visitorsCount = await syncVisitorsCount(placeId);
 
     res.json({
       success: true,
       message: "Marked as visited",
-      visitorsCount: place.visitorsCount
+      visitorsCount
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -587,24 +595,13 @@ exports.removeVisitedPlace = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const had = (user.visitedPlaces || []).some(
-      (v) => v.place && v.place.toString() === placeId
-    );
-
     user.visitedPlaces = (user.visitedPlaces || []).filter(
       (v) => !v.place || v.place.toString() !== placeId
     );
     await user.save();
 
-    let visitorsCount = 0;
-    const place = await Place.findById(placeId);
-    if (place) {
-      if (had) {
-        place.visitorsCount = Math.max(0, (place.visitorsCount || 0) - 1);
-        await place.save();
-      }
-      visitorsCount = place.visitorsCount || 0;
-    }
+    // Recompute from all users (never use seed ± 1)
+    const visitorsCount = await syncVisitorsCount(placeId);
 
     res.json({
       success: true,

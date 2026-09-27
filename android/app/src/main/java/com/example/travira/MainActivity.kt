@@ -310,7 +310,12 @@ fun TraviraApp(
             BackHandler { selectedPlace = null }
             PlaceScreen(
                 place = selectedPlace!!,
-                onBackClick = { selectedPlace = null },
+                onBackClick = {
+                    selectedPlace = null
+                    // Reload list so other screens see latest visitors/ratings
+                    refreshTrigger++
+                    refreshUser()
+                },
                 tokenManager = tokenManager,
                 isWishlistedInitially = selectedPlace!!._id in wishlistIds,
                 isVisitedInitially = selectedPlace!!._id in visitedIds,
@@ -325,6 +330,28 @@ fun TraviraApp(
                     selectedPlace = null
                     refreshTrigger++
                     refreshUser()
+                },
+                onStatsChanged = { placeId, visitors, avgRating, ratingsCount ->
+                    placesList = placesList.map { p ->
+                        if (p._id == placeId) {
+                            p.copy(
+                                visitorsCount = visitors,
+                                averageRating = avgRating,
+                                rating = avgRating,
+                                ratingsCount = ratingsCount
+                            )
+                        } else p
+                    }
+                    selectedPlace = selectedPlace?.let { sp ->
+                        if (sp._id == placeId) {
+                            sp.copy(
+                                visitorsCount = visitors,
+                                averageRating = avgRating,
+                                rating = avgRating,
+                                ratingsCount = ratingsCount
+                            )
+                        } else sp
+                    }
                 },
                 currentUserId = currentUser?.userId ?: tokenManager.userId
             )

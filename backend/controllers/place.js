@@ -1,9 +1,17 @@
 /**
  * Place controller — public feed, wishlist, ratings.
  * Place create/edit/delete is admin-only (see controllers/admin.js).
+ *
+ * visitorsCount = real count of users who marked visited (not seed data)
+ * ratingsCount / averageRating = derived from place.ratings[]
  */
 const Place = require("../models/place");
 const User = require("../models/user");
+const {
+  visitorCountMap,
+  ratingStats,
+  withLiveStats
+} = require("../utils/placeStats");
 
 // ── Public feed ──────────────────────────────────────
 
@@ -15,10 +23,8 @@ exports.getPlaces = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const data = places.map((p) => ({
-      ...p,
-      ratingsCount: Array.isArray(p.ratings) ? p.ratings.length : 0
-    }));
+    const visitMap = await visitorCountMap(places.map((p) => p._id));
+    const data = places.map((p) => withLiveStats(p, visitMap));
 
     res.json({
       success: true,
@@ -46,12 +52,10 @@ exports.getPlaceById = async (req, res) => {
       });
     }
 
+    const visitMap = await visitorCountMap([place._id]);
     res.json({
       success: true,
-      place: {
-        ...place,
-        ratingsCount: Array.isArray(place.ratings) ? place.ratings.length : 0
-      }
+      place: withLiveStats(place, visitMap)
     });
   } catch (error) {
     res.status(500).json({
@@ -68,11 +72,14 @@ exports.getMyPlaces = async (req, res) => {
   try {
     const places = await Place.find({
       addedBy: req.user.id
-    }).populate("addedBy", "name email");
+    })
+      .populate("addedBy", "name email")
+      .lean();
 
+    const visitMap = await visitorCountMap(places.map((p) => p._id));
     res.json({
       success: true,
-      places
+      places: places.map((p) => withLiveStats(p, visitMap))
     });
   } catch (error) {
     res.status(500).json({
@@ -152,12 +159,16 @@ exports.getWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate(
       "wishlist",
-      "name shortDescription description city state country location imageUrl averageRating visitorsCount"
+      "name shortDescription description city state country location imageUrl averageRating visitorsCount ratings"
     );
+
+    const list = user?.wishlist || [];
+    const lean = list.map((p) => (p.toObject ? p.toObject() : p));
+    const visitMap = await visitorCountMap(lean.map((p) => p._id));
 
     res.json({
       success: true,
-      wishlist: user?.wishlist || []
+      wishlist: lean.map((p) => withLiveStats(p, visitMap))
     });
   } catch (error) {
     res.status(500).json({
@@ -207,26 +218,32 @@ exports.ratePlace = async (req, res) => {
       });
     }
 
-    // Recompute average (1 decimal place)
-    const total = place.ratings.reduce((sum, r) => sum + (r.value || 0), 0);
-    place.averageRating =
-      place.ratings.length > 0
-        ? Math.round((total / place.ratings.length) * 10) / 10
-        : 0;
-
+    // Always derive average from ratings array (source of truth)
+    const { averageRating, ratingsCount } = ratingStats(place.ratings);
+    place.averageRating = averageRating;
     await place.save();
+
+    // Live visitors from real visits (not seed)
+    const visitMap = await visitorCountMap([place._id]);
+    const visitorsCount = visitMap[String(place._id)] || 0;
+    // Keep stored field in sync for other readers
+    if (place.visitorsCount !== visitorsCount) {
+      place.visitorsCount = visitorsCount;
+      await place.save();
+    }
 
     res.json({
       success: true,
       message: existing ? "Rating updated" : "Rating submitted",
-      averageRating: place.averageRating,
-      ratingsCount: place.ratings.length,
-      visitorsCount: place.visitorsCount,
+      averageRating,
+      ratingsCount,
+      visitorsCount,
       place: {
         _id: place._id,
-        averageRating: place.averageRating,
-        visitorsCount: place.visitorsCount,
-        ratingsCount: place.ratings.length
+        averageRating,
+        rating: averageRating,
+        visitorsCount,
+        ratingsCount
       }
     });
   } catch (error) {

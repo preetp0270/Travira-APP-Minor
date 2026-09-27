@@ -23,9 +23,16 @@ data class Place(
     /** Populated by backend as { _id, name, email } or raw ObjectId string */
     val addedBy: AddedByUser? = null
 ) {
-    /** Prefer live `rating`, fall back to averageRating */
+    /**
+     * Prefer averageRating from real reviews when present;
+     * otherwise fall back to rating field.
+     */
     val displayRating: Double
-        get() = if (rating > 0) rating else averageRating
+        get() = when {
+            averageRating > 0 -> averageRating
+            rating > 0 -> rating
+            else -> 0.0
+        }
 
     val locationLine: String
         get() = listOfNotNull(city, state, country)

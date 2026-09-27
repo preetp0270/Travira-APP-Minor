@@ -85,6 +85,8 @@ fun PlaceScreen(
     onRequireLogin: () -> Unit = {},
     onEditClick: ((Place) -> Unit)? = null,
     onDeleted: (() -> Unit)? = null,
+    /** Notify parent so list/home shows live visitors + rating for all users after refresh */
+    onStatsChanged: ((placeId: String, visitorsCount: Int, averageRating: Double, ratingsCount: Int) -> Unit)? = null,
     currentUserId: String? = null
 ) {
     val context = LocalContext.current
@@ -391,12 +393,18 @@ fun PlaceScreen(
                                 if (isVisited) {
                                     val res = RetrofitInstance.authApi.removeVisitedPlace("Bearer $token", place._id)
                                     isVisited = false
-                                    res.visitorsCount?.let { liveVisitors = it }
+                                    res.visitorsCount?.let {
+                                        liveVisitors = it
+                                        onStatsChanged?.invoke(place._id, it, liveRating, liveRatingsCount)
+                                    }
                                     actionMsg = "Removed from visited"
                                 } else {
                                     val res = RetrofitInstance.authApi.addVisitedPlace("Bearer $token", place._id)
                                     isVisited = true
-                                    res.visitorsCount?.let { liveVisitors = it }
+                                    res.visitorsCount?.let {
+                                        liveVisitors = it
+                                        onStatsChanged?.invoke(place._id, it, liveRating, liveRatingsCount)
+                                    }
                                     actionMsg = "Marked as visited"
                                 }
                             }
@@ -492,7 +500,14 @@ fun PlaceScreen(
                                         )
                                         liveRating = res.averageRating
                                         liveRatingsCount = res.ratingsCount
-                                        if (res.visitorsCount > 0) liveVisitors = res.visitorsCount
+                                        // Always take server visitorsCount (may be 0 — that is valid)
+                                        liveVisitors = res.visitorsCount
+                                        onStatsChanged?.invoke(
+                                            place._id,
+                                            liveVisitors,
+                                            liveRating,
+                                            liveRatingsCount
+                                        )
                                         actionMsg = res.message ?: "Thanks for your rating!"
                                     } finally {
                                         ratingSubmitting = false
