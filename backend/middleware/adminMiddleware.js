@@ -1,6 +1,7 @@
 /**
  * Admin gate — must run AFTER authMiddleware.
- * Allows role: "admin" or "superadmin".
+ * Allows role: "admin" only.
+ * Legacy "superadmin" accounts are normalized to "admin" once.
  * Sets req.adminUser to the full user document.
  */
 const User = require("../models/user");
@@ -16,7 +17,13 @@ const adminMiddleware = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.role !== "admin" && user.role !== "superadmin") {
+    // One-time migration: old superadmin → admin
+    if (user.role === "superadmin") {
+      user.role = "admin";
+      await user.save();
+    }
+
+    if (user.role !== "admin") {
       return res.status(403).json({ message: "Access denied. Admin only." });
     }
 

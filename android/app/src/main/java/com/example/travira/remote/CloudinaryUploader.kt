@@ -17,7 +17,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Uploads an image to Cloudinary (unsigned preset) and returns the secure URL.
- * Images are downscaled + JPEG-compressed before upload to avoid slow / OOM failures.
+ * Supports local files (Uri) and remote image URLs (Cloudinary fetches them).
+ * Local images are downscaled + JPEG-compressed before upload.
  */
 object CloudinaryUploader {
 
@@ -29,8 +30,12 @@ object CloudinaryUploader {
     private val client = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .writeTimeout(45, TimeUnit.SECONDS)
-        .readTimeout(45, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .build()
+
+    fun isCloudinaryUrl(url: String?): Boolean =
+        !url.isNullOrBlank() &&
+            url.startsWith("https://res.cloudinary.com/", ignoreCase = true)
 
     suspend fun uploadImage(context: Context, imageUri: Uri): String = withContext(Dispatchers.IO) {
         val bytes = compressImage(context, imageUri)
@@ -39,6 +44,7 @@ object CloudinaryUploader {
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("upload_preset", UPLOAD_PRESET)
+            .addFormDataPart("folder", "travira")
             .addFormDataPart(
                 "file",
                 "travira_${System.currentTimeMillis()}.jpg",
@@ -46,6 +52,39 @@ object CloudinaryUploader {
             )
             .build()
 
+        postUpload(body)
+    }
+
+    /**
+     * Fetch a public image URL into Cloudinary and return the new secure_url.
+     * If [imageUrl] is already a Cloudinary URL, returns it unchanged.
+     */
+    suspend fun uploadImageFromUrl(imageUrl: String): String = withContext(Dispatchers.IO) {
+        val trimmed = imageUrl.trim()
+        if (trimmed.isBlank()) {
+            throw Exception("Image URL is empty")
+        }
+        if (isCloudinaryUrl(trimmed)) {
+            return@withContext trimmed
+        }
+        if (!trimmed.startsWith("http://", ignoreCase = true) &&
+            !trimmed.startsWith("https://", ignoreCase = true)
+        ) {
+            throw Exception("Image URL must start with http:// or https://")
+        }
+
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("upload_preset", UPLOAD_PRESET)
+            .addFormDataPart("folder", "travira")
+            // Cloudinary fetches the remote URL server-side
+            .addFormDataPart("file", trimmed)
+            .build()
+
+        postUpload(body)
+    }
+
+    private fun postUpload(body: MultipartBody): String {
         val request = Request.Builder()
             .url("https://api.cloudinary.com/v1_1/$CLOUD_NAME/image/upload")
             .post(body)
@@ -68,12 +107,13 @@ object CloudinaryUploader {
                 if (secureUrl.isBlank()) {
                     throw Exception("Upload succeeded but no image URL returned")
                 }
-                secureUrl
+                return secureUrl
             }
         } catch (e: Exception) {
             if (e.message?.startsWith("Image upload") == true ||
                 e.message?.startsWith("Upload succeeded") == true ||
-                e.message?.startsWith("Could not") == true
+                e.message?.startsWith("Could not") == true ||
+                e.message?.startsWith("Image URL") == true
             ) {
                 throw e
             }

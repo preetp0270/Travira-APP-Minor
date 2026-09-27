@@ -69,13 +69,24 @@
     }
     .preview-meta { font-size: 0.8rem; color: #546E7A; text-align: left; word-break: break-all; }
     .hint { font-size: 0.78rem; color: #78909C; margin-top: 6px; }
+    .img-mode {
+      display: flex; gap: 8px; margin: 8px 0 12px; flex-wrap: wrap;
+    }
+    .img-mode button {
+      flex: 1; min-width: 120px; padding: 10px 12px; font-size: 0.9rem;
+      background: #ECEFF1; color: #37474F; font-weight: 600;
+    }
+    .img-mode button.active {
+      background: #1565C0; color: #fff;
+    }
+    .img-panel.hidden { display: none !important; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card" id="loginCard">
       <h1>Admin login</h1>
-      <p class="sub">Sign in with an admin or superadmin account to upload places from the browser.</p>
+      <p class="sub">Sign in with an admin account to upload places from the browser.</p>
       <form id="loginForm">
         <label for="email">Email (username)</label>
         <input id="email" type="email" required autocomplete="username" />
@@ -132,17 +143,31 @@
         </div>
 
         <label>Place image</label>
-        <div class="upload-box">
-          <input id="imageFile" type="file" accept="image/*" />
-          <p class="hint">Pick a photo → it uploads to Cloudinary when you save. Or paste an existing URL below.</p>
-          <div class="preview-wrap" id="previewWrap">
-            <img id="previewImg" alt="Preview" />
-            <div class="preview-meta" id="previewMeta"></div>
-          </div>
+        <div class="img-mode" role="tablist">
+          <button type="button" class="active" id="modeFileBtn" data-mode="file">Upload file</button>
+          <button type="button" id="modeUrlBtn" data-mode="url">Image link (URL)</button>
         </div>
 
-        <label for="imageUrl">Image URL (auto-filled after Cloudinary upload)</label>
-        <input id="imageUrl" type="url" placeholder="https://res.cloudinary.com/..." />
+        <div class="upload-box img-panel" id="panelFile">
+          <input id="imageFile" type="file" accept="image/*" />
+          <p class="hint">JPG, PNG, WebP, etc. File is uploaded to Cloudinary when you save, then the URL is stored in MongoDB.</p>
+        </div>
+
+        <div class="upload-box img-panel hidden" id="panelUrl">
+          <label for="sourceImageUrl" style="margin-top:0">Paste image URL from anywhere</label>
+          <input id="sourceImageUrl" type="url" placeholder="https://example.com/photo.jpg" />
+          <p class="hint">Any public image link (Google, Unsplash, Wikipedia, CDN…). On save we fetch it into Cloudinary, then store the Cloudinary URL in MongoDB.</p>
+          <button type="button" class="secondary" id="previewUrlBtn" style="margin-top:10px;width:auto;padding:10px 14px;font-size:0.9rem">Preview link</button>
+        </div>
+
+        <div class="preview-wrap" id="previewWrap" style="margin-top:12px">
+          <img id="previewImg" alt="Preview" />
+          <div class="preview-meta" id="previewMeta"></div>
+        </div>
+
+        <label for="imageUrl">Final Cloudinary URL (filled automatically on save)</label>
+        <input id="imageUrl" type="url" placeholder="https://res.cloudinary.com/..." readonly />
+        <p class="hint">You can clear the form and choose file or link again for the next place.</p>
 
         <div class="row">
           <button type="submit" id="saveBtn">Save place</button>
@@ -174,11 +199,17 @@
     const recentList = document.getElementById("recentList");
     const imageFile = document.getElementById("imageFile");
     const imageUrlInput = document.getElementById("imageUrl");
+    const sourceImageUrl = document.getElementById("sourceImageUrl");
     const previewWrap = document.getElementById("previewWrap");
     const previewImg = document.getElementById("previewImg");
     const previewMeta = document.getElementById("previewMeta");
+    const panelFile = document.getElementById("panelFile");
+    const panelUrl = document.getElementById("panelUrl");
+    const modeFileBtn = document.getElementById("modeFileBtn");
+    const modeUrlBtn = document.getElementById("modeUrlBtn");
     const recent = [];
     let objectUrl = null;
+    let imageMode = "file"; // "file" | "url"
 
     function showMsg(el, type, text) {
       el.className = "msg " + type;
@@ -231,11 +262,29 @@
       return data;
     }
 
-    /** Upload file to Cloudinary (unsigned preset). Returns secure_url. */
-    async function uploadToCloudinary(file) {
-      if (!file) return "";
+    function setImageMode(mode) {
+      imageMode = mode === "url" ? "url" : "file";
+      modeFileBtn.classList.toggle("active", imageMode === "file");
+      modeUrlBtn.classList.toggle("active", imageMode === "url");
+      panelFile.classList.toggle("hidden", imageMode !== "file");
+      panelUrl.classList.toggle("hidden", imageMode !== "url");
+    }
+    modeFileBtn.addEventListener("click", () => setImageMode("file"));
+    modeUrlBtn.addEventListener("click", () => setImageMode("url"));
+
+    function isCloudinaryUrl(url) {
+      return /^https?:\/\/res\.cloudinary\.com\//i.test(url || "");
+    }
+
+    /**
+     * Upload a local File OR a remote image URL to Cloudinary (unsigned preset).
+     * Cloudinary accepts remote URLs as the "file" field and fetches them server-side.
+     * Returns secure_url.
+     */
+    async function uploadToCloudinary(fileOrUrl) {
+      if (!fileOrUrl) return "";
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", fileOrUrl);
       form.append("upload_preset", UPLOAD_PRESET);
       form.append("folder", "travira");
 
@@ -290,15 +339,25 @@
       const file = imageFile.files && imageFile.files[0];
       setPreviewFromFile(file || null);
       if (file) {
-        // Clear manual URL so save uses the new file
-        // (URL is filled after successful Cloudinary upload)
+        imageUrlInput.value = "";
+        sourceImageUrl.value = "";
       }
     });
 
-    imageUrlInput.addEventListener("change", () => {
-      if (!imageFile.files || !imageFile.files[0]) {
-        setPreviewFromUrl(imageUrlInput.value.trim());
+    document.getElementById("previewUrlBtn").addEventListener("click", () => {
+      const url = sourceImageUrl.value.trim();
+      if (!url) {
+        showMsg(placeMsg, "err", "Paste an image URL first.");
+        return;
       }
+      setPreviewFromUrl(url);
+      previewMeta.textContent = url + " · will fetch into Cloudinary on save";
+      showMsg(placeMsg, "info", "Preview loaded. Save place to upload this link to Cloudinary.");
+    });
+
+    sourceImageUrl.addEventListener("change", () => {
+      const url = sourceImageUrl.value.trim();
+      if (url) setPreviewFromUrl(url);
     });
 
     (function init() {
@@ -307,7 +366,7 @@
       if (access && raw) {
         try {
           const user = JSON.parse(raw);
-          if (user.role === "admin" || user.role === "superadmin") {
+          if (user.role === "admin") {
             showUploader(user);
             return;
           }
@@ -330,7 +389,7 @@
           })
         });
         const role = data.user && data.user.role;
-        if (role !== "admin" && role !== "superadmin") {
+        if (role !== "admin") {
           showMsg(loginMsg, "err", "This account is not an admin.");
           return;
         }
@@ -340,7 +399,7 @@
         showMsg(
           placeMsg,
           "info",
-          "Logged in. Choose an image file or URL, then save places."
+          "Logged in. Use “Upload file” or “Image link (URL)” — both go through Cloudinary on save."
         );
       } catch (err) {
         showMsg(loginMsg, "err", err.message || "Login failed");
@@ -375,6 +434,7 @@
       );
       document.getElementById("country").value = "India";
       imageFile.value = "";
+      sourceImageUrl.value = "";
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
         objectUrl = null;
@@ -382,6 +442,7 @@
       previewWrap.classList.remove("show");
       previewImg.removeAttribute("src");
       previewMeta.textContent = "";
+      setImageMode(imageMode);
     }
 
     document.getElementById("clearBtn").addEventListener("click", clearPlaceForm);
@@ -402,10 +463,30 @@
       try {
         let imageUrl = imageUrlInput.value.trim();
         const file = imageFile.files && imageFile.files[0];
+        const remoteUrl = sourceImageUrl.value.trim();
 
-        if (file) {
-          showMsg(placeMsg, "info", "Uploading image to Cloudinary…");
+        // Priority: local file → remote URL (fetch into Cloudinary) → existing Cloudinary URL
+        if (imageMode === "file" && file) {
+          showMsg(placeMsg, "info", "Uploading file to Cloudinary…");
           imageUrl = await uploadToCloudinary(file);
+          imageUrlInput.value = imageUrl;
+          setPreviewFromUrl(imageUrl);
+        } else if (imageMode === "url" && remoteUrl) {
+          if (isCloudinaryUrl(remoteUrl)) {
+            // Already on Cloudinary — store as-is
+            imageUrl = remoteUrl;
+            imageUrlInput.value = imageUrl;
+            setPreviewFromUrl(imageUrl);
+          } else {
+            showMsg(placeMsg, "info", "Fetching image URL into Cloudinary…");
+            imageUrl = await uploadToCloudinary(remoteUrl);
+            imageUrlInput.value = imageUrl;
+            setPreviewFromUrl(imageUrl);
+          }
+        } else if (imageUrl && !isCloudinaryUrl(imageUrl)) {
+          // Final field has an external URL — still push through Cloudinary
+          showMsg(placeMsg, "info", "Fetching image URL into Cloudinary…");
+          imageUrl = await uploadToCloudinary(imageUrl);
           imageUrlInput.value = imageUrl;
           setPreviewFromUrl(imageUrl);
         }

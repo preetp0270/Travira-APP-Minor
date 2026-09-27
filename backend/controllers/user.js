@@ -143,6 +143,11 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Legacy: normalize old superadmin role → admin
+    if (user.role === "superadmin") {
+      user.role = "admin";
+    }
+
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 

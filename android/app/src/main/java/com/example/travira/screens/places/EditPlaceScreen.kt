@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -64,6 +65,7 @@ fun EditPlaceScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val accent = Color(0xFF37474F)
 
     var name by remember { mutableStateOf(place.name) }
     var shortDescription by remember { mutableStateOf(place.shortDescription.orEmpty()) }
@@ -73,7 +75,9 @@ fun EditPlaceScreen(
     var country by remember { mutableStateOf(place.country.orEmpty()) }
     var location by remember { mutableStateOf(place.location.orEmpty()) }
     var existingImageUrl by remember { mutableStateOf(place.imageUrl) }
+    var imageMode by remember { mutableStateOf(ImageInputMode.FILE) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var imageLink by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var successMsg by remember { mutableStateOf<String?>(null) }
@@ -81,7 +85,10 @@ fun EditPlaceScreen(
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        if (uri != null) imageUri = uri
+        if (uri != null) {
+            imageUri = uri
+            imageLink = ""
+        }
     }
 
     Scaffold(
@@ -94,7 +101,7 @@ fun EditPlaceScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF37474F),
+                    containerColor = accent,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -109,52 +116,125 @@ fun EditPlaceScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFECEFF1))
-                    .clickable { picker.launch("image/*") },
-                contentAlignment = Alignment.Center
-            ) {
-                when {
-                    imageUri != null -> {
-                        AsyncImage(
-                            model = imageUri,
-                            contentDescription = "New image",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                    !existingImageUrl.isNullOrBlank() -> {
-                        AsyncImage(
-                            model = existingImageUrl,
-                            contentDescription = "Current image",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.25f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Tap to change photo", color = Color.White, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                    else -> {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.AddAPhoto,
-                                contentDescription = null,
-                                tint = Color(0xFF546E7A),
-                                modifier = Modifier.size(40.dp)
+            Text(
+                "Place image",
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                color = Color(0xFF37474F)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            ImageModeToggle(
+                mode = imageMode,
+                onModeChange = { imageMode = it },
+                accent = accent
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (imageMode == ImageInputMode.FILE) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFFECEFF1))
+                        .clickable { picker.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        imageUri != null -> {
+                            AsyncImage(
+                                model = imageUri,
+                                contentDescription = "New image",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Tap to add photo", color = Color(0xFF546E7A))
+                        }
+                        !existingImageUrl.isNullOrBlank() -> {
+                            AsyncImage(
+                                model = existingImageUrl,
+                                contentDescription = "Current image",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.25f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "Tap to change photo",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        else -> {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Default.AddAPhoto,
+                                    contentDescription = null,
+                                    tint = Color(0xFF546E7A),
+                                    modifier = Modifier.size(40.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Tap to add photo", color = Color(0xFF546E7A))
+                            }
                         }
                     }
+                }
+                Text(
+                    "New file uploads to Cloudinary on save. Leave as-is to keep the current image.",
+                    fontSize = 12.sp,
+                    color = Color(0xFF78909C),
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            } else {
+                OutlinedTextField(
+                    value = imageLink,
+                    onValueChange = {
+                        imageLink = it
+                        if (it.isNotBlank()) imageUri = null
+                    },
+                    label = { Text("New image URL from anywhere") },
+                    placeholder = { Text("https://example.com/photo.jpg") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Link, contentDescription = null, tint = accent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                Text(
+                    "Paste a public image link. On save we upload it to Cloudinary (or keep it if already Cloudinary). Leave empty to keep the current image.",
+                    fontSize = 12.sp,
+                    color = Color(0xFF78909C),
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+                val linkPreview = imageLink.trim().ifBlank { null }
+                if (linkPreview != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    AsyncImage(
+                        model = linkPreview,
+                        contentDescription = "URL preview",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else if (!existingImageUrl.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("Current image", fontSize = 12.sp, color = Color(0xFF78909C))
+                    AsyncImage(
+                        model = existingImageUrl,
+                        contentDescription = "Current image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
                 }
             }
 
@@ -192,8 +272,18 @@ fun EditPlaceScreen(
                             val token = tokenManager.accessToken
                                 ?: throw Exception("Not logged in")
                             var imageUrl = existingImageUrl
-                            if (imageUri != null) {
-                                imageUrl = CloudinaryUploader.uploadImage(context, imageUri!!)
+                            when (imageMode) {
+                                ImageInputMode.FILE -> {
+                                    if (imageUri != null) {
+                                        imageUrl = CloudinaryUploader.uploadImage(context, imageUri!!)
+                                    }
+                                }
+                                ImageInputMode.URL -> {
+                                    val link = imageLink.trim()
+                                    if (link.isNotBlank()) {
+                                        imageUrl = CloudinaryUploader.uploadImageFromUrl(link)
+                                    }
+                                }
                             }
                             val body = AddPlaceRequest(
                                 name = name.trim(),
@@ -235,7 +325,7 @@ fun EditPlaceScreen(
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37474F))
+                colors = ButtonDefaults.buttonColors(containerColor = accent)
             ) {
                 if (loading) {
                     CircularProgressIndicator(

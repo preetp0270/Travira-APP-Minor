@@ -12,8 +12,8 @@ These pages are served from the backend (`backend/public/`) on the same host as 
 
 | Page | URL | Purpose |
 |------|-----|---------|
-| **Admin login / place uploader** | [https://travira-app-minor.onrender.com/admin.html](https://travira-app-minor.onrender.com/admin.html) | Sign in as admin/superadmin and upload places (with Cloudinary images) from the browser |
-| **Admin registration** | [https://travira-app-minor.onrender.com/admin-register.html](https://travira-app-minor.onrender.com/admin-register.html) | Create a new admin/superadmin account after verifying the **MongoDB connection password** |
+| **Admin login / place uploader** | [https://travira-app-minor.onrender.com/admin.html](https://travira-app-minor.onrender.com/admin.html) | Sign in as admin; add places via **file upload** or **image URL** (both → Cloudinary → MongoDB) |
+| **Admin registration** | [https://travira-app-minor.onrender.com/admin-register.html](https://travira-app-minor.onrender.com/admin-register.html) | Create a new admin account after verifying the **MongoDB connection password** |
 | **Reset password** | [https://travira-app-minor.onrender.com/reset-password.html](https://travira-app-minor.onrender.com/reset-password.html) | Set a new password from the email reset link (`?token=…`) |
 | **API health** | [https://travira-app-minor.onrender.com/api/health](https://travira-app-minor.onrender.com/api/health) | Service status, Mongo/JWT/Gemini config flags |
 | **API ping** | [https://travira-app-minor.onrender.com/api/ping](https://travira-app-minor.onrender.com/api/ping) | Keep-alive / uptime check |
@@ -38,7 +38,7 @@ These pages are served from the backend (`backend/public/`) on the same host as 
 * **Wishlist** — Save places for later  
 * **AI travel chatbot** — Gemini (travel tips, culture, itinerary ideas)  
 * **Profile** — Edit profile, notifications, visited list, contributions  
-* **Admin (in-app)** — Dashboard for admins/superadmins  
+* **Admin (in-app)** — Dashboard for admins  
 
 ### Web (browser)
 
@@ -100,19 +100,24 @@ Admin/create place: sending `visitorsCount` (or `baseVisitorsCount`) stores the 
 
 1. Open [admin-register.html](https://travira-app-minor.onrender.com/admin-register.html)  
 2. Enter **MongoDB password** only (password segment of `MONGODB_URI`, or env `ADMIN_BOOTSTRAP_PASSWORD` / `MONGO_PASSWORD`)  
-3. Create admin or superadmin (name, email, password, role)  
+3. Create admin (name, email, password, role)  
 4. API: `POST /api/admin-bootstrap/register`  
 
 **B. Upload places in browser**
 
 1. Open [admin.html](https://travira-app-minor.onrender.com/admin.html)  
-2. Log in with admin/superadmin account  
-3. Add places (name, description, location, image → Cloudinary)  
-4. API: `POST /api/admin/places` (JWT + admin role)  
+2. Log in with admin account  
+3. Add places (name, description, location)  
+4. **Image:** either pick a **file** (JPG/PNG/…) or paste an **image link** from anywhere → on save the image is uploaded to **Cloudinary**, then the Cloudinary URL is stored in **MongoDB**  
+5. API: `POST /api/admin/places` (JWT + admin role)  
 
-**C. In-app admin**
+**C. In-app admin (Add / Edit place)**
 
 - Same credentials; admin dashboard and place management in the Android app  
+- **Add place** and **Edit place** support the same image options as the web tool:  
+  - **Upload file** — gallery photo → Cloudinary → MongoDB  
+  - **Image link** — paste any public URL → Cloudinary fetch → MongoDB  
+- Edit: leave image empty to keep the current photo; use file or URL only when replacing  
 
 ### 4. Auth flow
 
@@ -133,7 +138,7 @@ Password reset    →  POST /api/users/forgot-password
 |------|-----------|--------|
 | Places | `/api/place` or `/api/places` | List, detail, wishlist, rating |
 | Users | `/api/users` | Auth, profile, visited, notifications |
-| Admin | `/api/admin` | Places & users (JWT + admin/superadmin) |
+| Admin | `/api/admin` | Places & users (JWT + admin) |
 | Admin bootstrap | `/api/admin-bootstrap/register` | Public; gated by MongoDB password |
 | Chat | `/api/chat` | Gemini travel chatbot (auth) |
 | Health | `/api/health`, `/api/ping` | Status / keep-alive |
@@ -149,7 +154,7 @@ Password reset    →  POST /api/users/forgot-password
 | DELETE | `/api/users/visited/:id` | Yes | Unmark visited |
 | POST | `/api/place/:id/rating` | Yes | Submit/update rating |
 | POST | `/api/admin/places` | Admin | Create place |
-| POST | `/api/admin-bootstrap/register` | Mongo password | Create admin/superadmin |
+| POST | `/api/admin-bootstrap/register` | Mongo password | Create admin |
 | POST | `/api/chat` | Yes | AI travel message |
 
 ---

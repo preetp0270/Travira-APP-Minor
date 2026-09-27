@@ -1,6 +1,6 @@
 /**
  * Admin routes — mounted at /api/admin
- * All routes require authMiddleware + adminMiddleware (admin | superadmin)
+ * All routes require authMiddleware + adminMiddleware (admin only)
  */
 const express = require("express");
 const router = express.Router();

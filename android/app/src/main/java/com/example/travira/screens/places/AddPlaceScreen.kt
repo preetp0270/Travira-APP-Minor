@@ -4,9 +4,12 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -52,6 +56,8 @@ import com.example.travira.remote.CloudinaryUploader
 import com.example.travira.remote.RetrofitInstance
 import kotlinx.coroutines.launch
 
+internal enum class ImageInputMode { FILE, URL }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPlaceScreen(
@@ -70,7 +76,9 @@ fun AddPlaceScreen(
     var state by remember { mutableStateOf("") }
     var country by remember { mutableStateOf("India") }
     var location by remember { mutableStateOf("") }
+    var imageMode by remember { mutableStateOf(ImageInputMode.FILE) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var imageLink by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var successMsg by remember { mutableStateOf<String?>(null) }
@@ -78,7 +86,16 @@ fun AddPlaceScreen(
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        if (uri != null) imageUri = uri
+        if (uri != null) {
+            imageUri = uri
+            imageLink = ""
+        }
+    }
+
+    val previewModel: Any? = when {
+        imageMode == ImageInputMode.FILE && imageUri != null -> imageUri
+        imageMode == ImageInputMode.URL && imageLink.isNotBlank() -> imageLink.trim()
+        else -> null
     }
 
     Scaffold(
@@ -106,34 +123,89 @@ fun AddPlaceScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Image picker
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFE3F2FD))
-                    .clickable { picker.launch("image/*") },
-                contentAlignment = Alignment.Center
-            ) {
-                if (imageUri != null) {
+            Text(
+                "Place image",
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                color = Color(0xFF37474F)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            ImageModeToggle(
+                mode = imageMode,
+                onModeChange = { imageMode = it },
+                accent = Color(0xFF1565C0)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (imageMode == ImageInputMode.FILE) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFFE3F2FD))
+                        .clickable { picker.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (imageUri != null) {
+                        AsyncImage(
+                            model = imageUri,
+                            contentDescription = "Selected image",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.AddAPhoto,
+                                contentDescription = null,
+                                tint = Color(0xFF1565C0),
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Tap to pick photo (JPG, PNG…)", color = Color(0xFF1565C0))
+                        }
+                    }
+                }
+                Text(
+                    "File is uploaded to Cloudinary when you publish, then the URL is saved in MongoDB.",
+                    fontSize = 12.sp,
+                    color = Color(0xFF78909C),
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            } else {
+                OutlinedTextField(
+                    value = imageLink,
+                    onValueChange = {
+                        imageLink = it
+                        if (it.isNotBlank()) imageUri = null
+                    },
+                    label = { Text("Image URL from anywhere") },
+                    placeholder = { Text("https://example.com/photo.jpg") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Link, contentDescription = null, tint = Color(0xFF1565C0))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                Text(
+                    "Any public image link. On publish we fetch it into Cloudinary, then store the Cloudinary URL in MongoDB.",
+                    fontSize = 12.sp,
+                    color = Color(0xFF78909C),
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+                if (previewModel != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
                     AsyncImage(
-                        model = imageUri,
-                        contentDescription = "Selected image",
-                        modifier = Modifier.fillMaxSize(),
+                        model = previewModel,
+                        contentDescription = "URL preview",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(16.dp)),
                         contentScale = ContentScale.Crop
                     )
-                } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.AddAPhoto,
-                            contentDescription = null,
-                            tint = Color(0xFF1565C0),
-                            modifier = Modifier.size(40.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Tap to add photo", color = Color(0xFF1565C0))
-                    }
                 }
             }
 
@@ -175,8 +247,18 @@ fun AddPlaceScreen(
                     scope.launch {
                         try {
                             var imageUrl: String? = null
-                            if (imageUri != null) {
-                                imageUrl = CloudinaryUploader.uploadImage(context, imageUri!!)
+                            when (imageMode) {
+                                ImageInputMode.FILE -> {
+                                    if (imageUri != null) {
+                                        imageUrl = CloudinaryUploader.uploadImage(context, imageUri!!)
+                                    }
+                                }
+                                ImageInputMode.URL -> {
+                                    val link = imageLink.trim()
+                                    if (link.isNotBlank()) {
+                                        imageUrl = CloudinaryUploader.uploadImageFromUrl(link)
+                                    }
+                                }
                             }
                             val body = AddPlaceRequest(
                                 name = name.trim(),
@@ -193,7 +275,6 @@ fun AddPlaceScreen(
                                 body = body
                             )
                             successMsg = res.message ?: "Place published"
-                            // Go straight home (caller refreshes list)
                             onSubmitted()
                         } catch (e: Exception) {
                             error = e.message ?: "Failed to submit place"
@@ -216,7 +297,7 @@ fun AddPlaceScreen(
                     )
                 } else {
                     Text(
-                        if (tokenManager.isAdmin) "Publish place" else "Submit for approval",
+                        "Publish place",
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -224,15 +305,69 @@ fun AddPlaceScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = if (tokenManager.isAdmin)
-                    "As admin, your place goes live on the home feed immediately."
-                else
-                    "New places are reviewed by admin before they appear on the home feed.",
+                text = "Your place goes live on the home feed immediately after publish.",
                 fontSize = 12.sp,
                 color = Color.Gray
             )
             Spacer(modifier = Modifier.height(40.dp))
         }
+    }
+}
+
+@Composable
+internal fun ImageModeToggle(
+    mode: ImageInputMode,
+    onModeChange: (ImageInputMode) -> Unit,
+    accent: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        ModeChip(
+            label = "Upload file",
+            selected = mode == ImageInputMode.FILE,
+            accent = accent,
+            modifier = Modifier.weight(1f),
+            onClick = { onModeChange(ImageInputMode.FILE) }
+        )
+        ModeChip(
+            label = "Image link",
+            selected = mode == ImageInputMode.URL,
+            accent = accent,
+            modifier = Modifier.weight(1f),
+            onClick = { onModeChange(ImageInputMode.URL) }
+        )
+    }
+}
+
+@Composable
+private fun ModeChip(
+    label: String,
+    selected: Boolean,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) accent else Color(0xFFECEFF1))
+            .border(
+                width = 1.dp,
+                color = if (selected) accent else Color(0xFFB0BEC5),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            color = if (selected) Color.White else Color(0xFF37474F),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp
+        )
     }
 }
 

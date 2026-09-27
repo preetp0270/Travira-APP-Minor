@@ -1,7 +1,7 @@
 /**
  * User model — accounts, wishlist, visited places, notifications, auth tokens.
  *
- * Roles: "user" | "admin" | "superadmin"
+ * Roles: "user" | "admin"
  * tokenVersion is bumped on password reset so old JWTs fail everywhere.
  */
 const mongoose = require("mongoose");
@@ -121,7 +121,7 @@ const userSchema = new mongoose.Schema({
 
   role: {
     type: String,
-    enum: ["user", "admin", "superadmin"],
+    enum: ["user", "admin"],
     default: "user"
   },
 

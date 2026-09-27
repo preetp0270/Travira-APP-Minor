@@ -1,6 +1,6 @@
 /**
  * Admin controller — manage places and users.
- * All routes require authMiddleware + adminMiddleware (admin or superadmin).
+ * All routes require authMiddleware + adminMiddleware (admin only).
  */
 const Place = require("../models/place");
 const User = require("../models/user");
@@ -220,7 +220,7 @@ exports.adminAddPlace = async (req, res) => {
 /** GET /api/admin/users */
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find({ role: { $in: ["user", "admin"] } })
+    const users = await User.find({ role: { $in: ["user", "admin", "superadmin"] } })
       .select(
         "-password -refreshTokens -wishlist -addedPlaces -visitedPlaces -notifications"
       )
@@ -314,13 +314,6 @@ exports.adminUpdateUser = async (req, res) => {
     if (!target) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    if (target.role === "superadmin") {
-      return res.status(403).json({
-        success: false,
-        message: "Cannot modify main admin account"
-      });
-    }
-
     const { name, email, phone, location, bio, password, role } = req.body || {};
     if (name !== undefined) target.name = String(name).trim();
     if (email !== undefined) {
@@ -371,12 +364,6 @@ exports.adminDeleteUser = async (req, res) => {
     if (!target) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    if (target.role === "superadmin") {
-      return res.status(403).json({
-        success: false,
-        message: "Cannot delete main admin"
-      });
-    }
     if (target._id.toString() === req.user.id) {
       return res.status(403).json({
         success: false,
@@ -420,8 +407,8 @@ function expectedMongoGatePassword() {
 
 /**
  * POST /api/admin-bootstrap/register  (public — gated by MongoDB password only)
- * Body: { mongoPassword, name, email, password, phone?, location?, role? }
- * role: "admin" | "superadmin" (default "admin")
+ * Body: { mongoPassword, name, email, password, phone?, location? }
+ * Always creates role: "admin"
  */
 exports.bootstrapRegisterAdmin = async (req, res) => {
   try {
@@ -431,8 +418,7 @@ exports.bootstrapRegisterAdmin = async (req, res) => {
     const password = req.body?.password;
     const phone = String(req.body?.phone || "").trim();
     const location = String(req.body?.location || "").trim();
-    const roleRaw = String(req.body?.role || "admin").trim().toLowerCase();
-    const role = roleRaw === "superadmin" ? "superadmin" : "admin";
+    const role = "admin";
 
     if (!mongoPassword) {
       return res.status(400).json({

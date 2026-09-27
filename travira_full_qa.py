@@ -777,7 +777,7 @@ def main() -> None:
     admin_token, _, admin_user = ("", "", {})
     if admin_email and admin_pass:
         admin_token, _, admin_user = section_login(admin_email, admin_pass, "admin")
-        if admin_user.get("role") not in ("admin", "superadmin"):
+        if admin_user.get("role") != "admin":
             log(f"  ⚠️  Admin login role is {admin_user.get('role')} — admin routes may 403")
 
     section_user_features(user_token, place_id)

@@ -124,7 +124,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/chat", chatRoutes);
 
-// Public bootstrap: create admin/superadmin after proving MongoDB password
+// Public bootstrap: create admin after proving MongoDB password
 // (HTML form: /admin-register.html)
 const adminController = require("./controllers/admin");
 app.post(
