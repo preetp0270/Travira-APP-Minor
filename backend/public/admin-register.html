@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Travira — Admin registration</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: "Segoe UI", system-ui, sans-serif;
+      background: linear-gradient(160deg, #0B1D2A, #0D47A1, #1565C0, #42A5F5);
+      color: #0D1B2A; padding: 24px;
+    }
+    .wrap { max-width: 480px; margin: 0 auto; }
+    .card {
+      background: rgba(255,255,255,0.94);
+      border-radius: 24px; padding: 28px 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.6);
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 6px; color: #1565C0; font-size: 1.45rem; }
+    p.sub { margin: 0 0 18px; color: #546E7A; font-size: 0.9rem; line-height: 1.45; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin: 12px 0 6px; color: #37474F; }
+    input, select {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #B0BEC5;
+      font-size: 1rem; outline: none; font-family: inherit;
+    }
+    input:focus, select:focus { border-color: #1565C0; box-shadow: 0 0 0 3px rgba(21,101,192,0.2); }
+    button {
+      width: 100%; margin-top: 18px; padding: 14px 18px; border: none; border-radius: 14px;
+      background: #1565C0; color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    button.secondary {
+      width: auto; margin-top: 0; padding: 10px 14px; font-size: 0.9rem; background: #546E7A;
+    }
+    .msg { margin-top: 14px; padding: 12px; border-radius: 12px; font-size: 0.9rem; display: none; }
+    .msg.ok { display: block; background: #E8F5E9; color: #2E7D32; }
+    .msg.err { display: block; background: #FFEBEE; color: #C62828; }
+    .msg.info { display: block; background: #E3F2FD; color: #1565C0; }
+    .hidden { display: none !important; }
+    .hint { font-size: 0.78rem; color: #78909C; margin-top: 6px; line-height: 1.4; }
+    .gate-ok {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      font-size: 0.85rem; color: #2E7D32; font-weight: 600; margin-bottom: 8px;
+    }
+    .links { margin-top: 16px; font-size: 0.85rem; color: #546E7A; }
+    .links a { color: #1565C0; font-weight: 600; text-decoration: none; }
+    .links a:hover { text-decoration: underline; }
+    .step { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; color: #90A4AE; text-transform: uppercase; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Step 1: MongoDB password gate -->
+    <div class="card" id="gateCard">
+      <div class="step">Step 1 of 2</div>
+      <h1>Verify MongoDB access</h1>
+      <p class="sub">
+        Enter the <strong>password from your Travira MongoDB connection string</strong>
+        (the same password used in <code>MONGODB_URI</code>). This unlocks admin registration.
+      </p>
+      <form id="gateForm">
+        <label for="mongoPassword">MongoDB password</label>
+        <input id="mongoPassword" type="password" required autocomplete="off" placeholder="Password from MONGODB_URI" />
+        <p class="hint">Example URI: mongodb+srv://user:<strong>THIS_PASSWORD</strong>@cluster… — enter only the password part.</p>
+        <button type="submit" id="gateBtn">Continue</button>
+      </form>
+      <div id="gateMsg" class="msg"></div>
+      <p class="links">Already an admin? <a href="/admin.html">Admin login / place uploader</a></p>
+    </div>
+
+    <!-- Step 2: Create admin account -->
+    <div class="card hidden" id="registerCard">
+      <div class="step">Step 2 of 2</div>
+      <h1>Create admin account</h1>
+      <p class="sub">MongoDB password accepted. Fill in the new admin user details.</p>
+      <div class="gate-ok">
+        <span>✓ Access verified</span>
+        <button type="button" class="secondary" id="changeMongoBtn">Change Mongo password</button>
+      </div>
+      <form id="registerForm">
+        <label for="name">Full name *</label>
+        <input id="name" required autocomplete="name" placeholder="e.g. Himesh" />
+
+        <label for="email">Email *</label>
+        <input id="email" type="email" required autocomplete="username" placeholder="admin@travira.app" />
+
+        <label for="password">Account password * (min 6 characters)</label>
+        <input id="password" type="password" minlength="6" required autocomplete="new-password" />
+
+        <label for="confirm">Confirm account password *</label>
+        <input id="confirm" type="password" minlength="6" required autocomplete="new-password" />
+
+        <label for="phone">Phone (optional)</label>
+        <input id="phone" type="tel" autocomplete="tel" />
+
+        <label for="location">Location (optional)</label>
+        <input id="location" autocomplete="address-level2" placeholder="e.g. Surat" />
+
+        <label for="role">Role *</label>
+        <select id="role">
+          <option value="admin">admin</option>
+          <option value="superadmin">superadmin</option>
+        </select>
+
+        <button type="submit" id="registerBtn">Create admin</button>
+      </form>
+      <div id="registerMsg" class="msg"></div>
+      <p class="links">After creating, go to <a href="/admin.html">Admin login</a> to upload places.</p>
+    </div>
+  </div>
+
+  <script>
+    const gateCard = document.getElementById("gateCard");
+    const registerCard = document.getElementById("registerCard");
+    const gateForm = document.getElementById("gateForm");
+    const registerForm = document.getElementById("registerForm");
+    const gateMsg = document.getElementById("gateMsg");
+    const registerMsg = document.getElementById("registerMsg");
+    const gateBtn = document.getElementById("gateBtn");
+    const registerBtn = document.getElementById("registerBtn");
+    let verifiedMongoPassword = "";
+
+    function show(el, type, text) {
+      el.className = "msg " + type;
+      el.textContent = text;
+    }
+
+    gateForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const mp = document.getElementById("mongoPassword").value;
+      if (!mp) {
+        show(gateMsg, "err", "Enter the MongoDB password.");
+        return;
+      }
+      // Client only stores it for the next request; server verifies on register
+      verifiedMongoPassword = mp;
+      gateCard.classList.add("hidden");
+      registerCard.classList.remove("hidden");
+      registerMsg.className = "msg";
+      registerMsg.textContent = "";
+    });
+
+    document.getElementById("changeMongoBtn").addEventListener("click", () => {
+      verifiedMongoPassword = "";
+      registerCard.classList.add("hidden");
+      gateCard.classList.remove("hidden");
+      document.getElementById("mongoPassword").value = "";
+      gateMsg.className = "msg";
+    });
+
+    registerForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const confirm = document.getElementById("confirm").value;
+      const phone = document.getElementById("phone").value.trim();
+      const location = document.getElementById("location").value.trim();
+      const role = document.getElementById("role").value;
+
+      if (password !== confirm) {
+        show(registerMsg, "err", "Account passwords do not match.");
+        return;
+      }
+      if (password.length < 6) {
+        show(registerMsg, "err", "Account password must be at least 6 characters.");
+        return;
+      }
+      if (!verifiedMongoPassword) {
+        show(registerMsg, "err", "MongoDB password missing. Go back to step 1.");
+        return;
+      }
+
+      registerBtn.disabled = true;
+      show(registerMsg, "info", "Creating admin account…");
+
+      try {
+        const res = await fetch("/api/admin-bootstrap/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mongoPassword: verifiedMongoPassword,
+            name,
+            email,
+            password,
+            phone,
+            location,
+            role
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          show(registerMsg, "err", data.message || "Registration failed.");
+          // Wrong mongo password → send back to step 1
+          if (res.status === 401) {
+            verifiedMongoPassword = "";
+            setTimeout(() => {
+              registerCard.classList.add("hidden");
+              gateCard.classList.remove("hidden");
+              show(gateMsg, "err", data.message || "Invalid MongoDB password");
+            }, 1200);
+          }
+          return;
+        }
+        show(
+          registerMsg,
+          "ok",
+          (data.message || "Admin created.") +
+            " Role: " + (data.user && data.user.role ? data.user.role : role) +
+            ". Open Admin login to sign in."
+        );
+        registerForm.reset();
+      } catch (err) {
+        show(registerMsg, "err", "Network error: " + (err.message || "failed"));
+      } finally {
+        registerBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

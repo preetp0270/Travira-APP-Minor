@@ -124,6 +124,14 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/chat", chatRoutes);
 
+// Public bootstrap: create admin/superadmin after proving MongoDB password
+// (HTML form: /admin-register.html)
+const adminController = require("./controllers/admin");
+app.post(
+  "/api/admin-bootstrap/register",
+  adminController.bootstrapRegisterAdmin
+);
+
 app.use((req, res) => res.status(404).json({ success: false, message: "API Route Not Found" }));
 
 /**

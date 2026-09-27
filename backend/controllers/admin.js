@@ -390,3 +390,115 @@ exports.adminDeleteUser = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * Extract password from a MongoDB connection URI.
+ * Supports mongodb:// and mongodb+srv:// with URL-encoded passwords.
+ */
+function extractMongoPasswordFromUri(uri) {
+  if (!uri || typeof uri !== "string") return null;
+  // mongodb[+srv]://user:password@host...
+  const m = uri.match(/^mongodb(?:\+srv)?:\/\/([^:@/]+):([^@/]+)@/i);
+  if (!m) return null;
+  try {
+    return decodeURIComponent(m[2]);
+  } catch {
+    return m[2];
+  }
+}
+
+function expectedMongoGatePassword() {
+  // Prefer explicit bootstrap secret, else password embedded in MONGODB_URI
+  if (process.env.ADMIN_BOOTSTRAP_PASSWORD) {
+    return String(process.env.ADMIN_BOOTSTRAP_PASSWORD);
+  }
+  if (process.env.MONGO_PASSWORD) {
+    return String(process.env.MONGO_PASSWORD);
+  }
+  return extractMongoPasswordFromUri(process.env.MONGODB_URI || "");
+}
+
+/**
+ * POST /api/admin-bootstrap/register  (public — gated by MongoDB password only)
+ * Body: { mongoPassword, name, email, password, phone?, location?, role? }
+ * role: "admin" | "superadmin" (default "admin")
+ */
+exports.bootstrapRegisterAdmin = async (req, res) => {
+  try {
+    const mongoPassword = String(req.body?.mongoPassword || "");
+    const name = String(req.body?.name || "").trim();
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const password = req.body?.password;
+    const phone = String(req.body?.phone || "").trim();
+    const location = String(req.body?.location || "").trim();
+    const roleRaw = String(req.body?.role || "admin").trim().toLowerCase();
+    const role = roleRaw === "superadmin" ? "superadmin" : "admin";
+
+    if (!mongoPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "MongoDB password is required"
+      });
+    }
+
+    const expected = expectedMongoGatePassword();
+    if (!expected) {
+      return res.status(503).json({
+        success: false,
+        message:
+          "Server is not configured for bootstrap (set MONGODB_URI with a password, or ADMIN_BOOTSTRAP_PASSWORD)"
+      });
+    }
+
+    if (mongoPassword !== expected) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid MongoDB password"
+      });
+    }
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "name, email, and password are required"
+      });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Account password must be at least 6 characters"
+      });
+    }
+
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "A user with this email already exists"
+      });
+    }
+
+    const hashed = await bcrypt.hash(String(password), 10);
+    const user = await User.create({
+      name,
+      email,
+      password: hashed,
+      phone,
+      location,
+      role
+    });
+
+    res.json({
+      success: true,
+      message: `${role} account created. You can log in on the admin page.`,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
