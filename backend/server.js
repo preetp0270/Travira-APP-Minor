@@ -1,3 +1,12 @@
+/**
+ * Travira backend entry point.
+ * Routes:
+ *   /api/place, /api/places  → places feed, wishlist, ratings
+ *   /api/users               → auth, profile, visited, notifications
+ *   /api/admin               → admin places & users
+ *   /api/chat                → Gemini travel chatbot
+ *   /api/health, /api/ping   → status & keep-alive
+ */
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
@@ -41,9 +50,10 @@ app.get("/", (req, res) => res.send("🚀 Travira Backend is Running..."));
 const { mailStatus, verifyMail } = require("./utils/mailer");
 
 /**
- * Health / status — use this after deploy to verify new code is live:
- *   GET https://travira-app-minor.onrender.com/api/health
- *   GET https://travira-app-minor.onrender.com/api/health/email  (SMTP verify)
+ * Health / status — use after deploy to verify new code is live:
+ *   GET /api/health
+ *   GET /api/health/email  (SMTP / Brevo verify)
+ * Also used by Android ServerKeepAlive as a fallback wake call.
  */
 function healthHandler(req, res) {
   const mail = mailStatus();
@@ -51,14 +61,13 @@ function healthHandler(req, res) {
     success: true,
     status: "ok",
     service: "travira",
-    version: "2026-09-27-mail-brevo-v6",
+    version: "2026-09-27-gemini-only",
     ts: Date.now(),
     uptime: process.uptime(),
     mongoConfigured: Boolean(process.env.MONGODB_URI),
     jwtConfigured: Boolean(process.env.JWT_SECRET),
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
     geminiModel: process.env.GEMINI_MODEL || "gemini-3.8-flash",
-    groqConfigured: Boolean(process.env.GROQ_API_KEY),
     emailConfigured: mail.configured,
     emailUser: mail.emailUser,
     emailLastError: mail.lastError,

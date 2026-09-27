@@ -1,5 +1,11 @@
 package com.example.travira.remote
 
+
+/**
+ * Chat API — POST /api/chat (requires Bearer token).
+ * Backend uses Gemini 3.8 Flash with 3.5 Flash-Lite fallback.
+ */
+
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST

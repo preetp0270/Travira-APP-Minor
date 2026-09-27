@@ -1,7 +1,7 @@
 {
   "name": "travira-backend",
   "version": "1.1.0",
-  "description": "Travira API — places, auth, chat (Gemini 3.8 Flash), email, password reset",
+  "description": "Travira API — places, auth, chat (Gemini 3.8 Flash + 3.5 Flash-Lite), email, password reset",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

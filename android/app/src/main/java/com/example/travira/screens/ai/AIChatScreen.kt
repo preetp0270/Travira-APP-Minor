@@ -196,6 +196,7 @@ fun AIChatScreen(
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
+                // Backend: gemini-3.8-flash primary, gemini-3.5-flash-lite fallback
                 Text(
                     "Travel-only assistant · Gemini 3.8 Flash",
                     color = Color.White.copy(alpha = 0.85f),

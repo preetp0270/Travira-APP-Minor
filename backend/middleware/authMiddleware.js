@@ -1,10 +1,12 @@
+/**
+ * JWT auth middleware.
+ * - Requires Authorization: Bearer <accessToken>
+ * - Rejects tokens issued before a password reset (tokenVersion mismatch)
+ * - Sets req.user = { id, email }
+ */
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 
-/**
- * Verifies Bearer JWT and rejects tokens issued before a password reset
- * (tokenVersion mismatch → forced re-login on all devices).
- */
 const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -13,7 +15,7 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const parts = authHeader.split(" ");
-    if (parts.length !== 2) {
+    if (parts.length !== 2 || parts[0] !== "Bearer") {
       return res.status(401).json({ message: "Invalid token format" });
     }
 
@@ -26,6 +28,7 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: "Unauthorized user" });
     }
 
+    // Password reset bumps tokenVersion → force re-login on all devices
     const tokenTv = decoded.tv != null ? decoded.tv : 0;
     const currentTv = user.tokenVersion || 0;
     if (tokenTv !== currentTv) {

@@ -1,5 +1,11 @@
 package com.example.travira.remote
 
+
+/**
+ * Auth & user profile API — /api/users/*
+ * Includes login, register, password reset, profile, visited, notifications.
+ */
+
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET

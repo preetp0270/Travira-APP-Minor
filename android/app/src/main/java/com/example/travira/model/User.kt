@@ -1,5 +1,10 @@
 package com.example.travira.model
 
+
+/**
+ * User domain models matching backend JSON (profile, visited, notifications).
+ */
+
 data class User(
     val id: String = "",
     val _id: String = "",

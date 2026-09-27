@@ -23,7 +23,7 @@ Travira is an AI-powered Android travel application that helps users discover po
     * Get directions and location details
     * Explore nearby attractions
 
-* 🤖 **AI Travel Chatbot**(Gemini 3.8 Flash)
+* 🤖 **AI Travel Chatbot** (Gemini 3.8 Flash + 3.5 Flash-Lite)
 
     * Ask questions about destinations
     * Learn about local culture, traditions, and history
@@ -64,7 +64,7 @@ Travira is an AI-powered Android travel application that helps users discover po
 | **MVVM Architecture**       | Clean and Scalable Architecture |
 | **MongoDB Atlas**           | Cloud Database                  |
 | **Authentication**          | Secure User Login               |
-| **Gemini API / OpenAI API** | AI Travel Chatbot               |
+| **Gemini API**               | AI Travel Chatbot (3.8 Flash)   |
 | **Git & GitHub**            | Version Control                 |
 
 ---

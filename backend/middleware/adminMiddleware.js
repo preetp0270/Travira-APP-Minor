@@ -1,10 +1,16 @@
+/**
+ * Admin gate — must run AFTER authMiddleware.
+ * Allows role: "admin" or "superadmin".
+ * Sets req.adminUser to the full user document.
+ */
 const User = require("../models/user");
 
-/**
- * Allows role: admin or superadmin.
- */
 const adminMiddleware = async (req, res, next) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Unauthorized user" });
+    }
+
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });

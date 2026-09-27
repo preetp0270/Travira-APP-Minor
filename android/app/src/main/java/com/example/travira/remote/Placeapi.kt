@@ -1,5 +1,11 @@
 package com.example.travira.remote
 
+
+/**
+ * Place API — public feed + auth wishlist/rating endpoints.
+ * Base path: /api/place
+ */
+
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET

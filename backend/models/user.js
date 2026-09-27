@@ -1,3 +1,9 @@
+/**
+ * User model — accounts, wishlist, visited places, notifications, auth tokens.
+ *
+ * Roles: "user" | "admin" | "superadmin"
+ * tokenVersion is bumped on password reset so old JWTs fail everywhere.
+ */
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
@@ -9,7 +15,9 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    lowercase: true,
+    trim: true
   },
 
   password: {
@@ -32,13 +40,13 @@ const userSchema = new mongoose.Schema({
     default: ""
   },
 
-  /** Prefer email alerts for login/signup (in-app notifications always stored when enabled) */
+  /** Prefer email alerts (in-app still stored when inAppNotifications is true) */
   emailNotifications: {
     type: Boolean,
     default: true
   },
 
-  /** Push-style in-app notification preference */
+  /** In-app notification preference */
   inAppNotifications: {
     type: Boolean,
     default: true
@@ -54,7 +62,10 @@ const userSchema = new mongoose.Schema({
     default: null
   },
 
-  /** Bumped on password reset so existing JWTs become invalid on all devices */
+  /**
+   * Bumped on password reset so existing access JWTs become invalid
+   * (authMiddleware compares JWT.tv to this value).
+   */
   tokenVersion: {
     type: Number,
     default: 0
@@ -114,6 +125,12 @@ const userSchema = new mongoose.Schema({
     default: "user"
   },
 
+  /**
+   * Stored refresh tokens for logout / session invalidation.
+   * NOTE: Do NOT put MongoDB TTL `expires` on nested createdAt —
+   * TTL indexes delete the entire parent document, which would wipe users.
+   * Token age is enforced in refreshToken handler instead.
+   */
   refreshTokens: [
     {
       token: {
@@ -122,8 +139,7 @@ const userSchema = new mongoose.Schema({
       },
       createdAt: {
         type: Date,
-        default: Date.now,
-        expires: 2592000
+        default: Date.now
       }
     }
   ],

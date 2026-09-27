@@ -1,5 +1,11 @@
 package com.example.travira.remote
 
+
+/**
+ * Lightweight health endpoints used by ServerKeepAlive
+ * to prevent Render free-tier cold starts while the app is open.
+ */
+
 import retrofit2.http.GET
 
 data class HealthResponse(

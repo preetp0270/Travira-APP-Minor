@@ -1,3 +1,7 @@
+/**
+ * Admin routes — mounted at /api/admin
+ * All routes require authMiddleware + adminMiddleware (admin | superadmin)
+ */
 const express = require("express");
 const router = express.Router();
 
@@ -17,17 +21,16 @@ const {
   adminDeleteUser
 } = require("../controllers/admin");
 
-// All routes require logged-in admin (or superadmin)
 router.use(authMiddleware, adminMiddleware);
 
-// ── Places (admin only — add / edit / delete) ──
+// Places
 router.get("/places", getAllPlaces);
 router.get("/places/:id", getPlaceAdminDetail);
 router.put("/places/:id", updateAnyPlace);
 router.delete("/places/:id", deleteAnyPlace);
 router.post("/places", adminAddPlace);
 
-// ── Users ──
+// Users
 router.get("/users", getUsers);
 router.get("/users/:id", getUserDetail);
 router.post("/users", adminCreateUser);

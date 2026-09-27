@@ -1,68 +1,98 @@
+/**
+ * Place model — tourist destinations shown in the Travira app feed.
+ * Places are created/edited by admins (see /api/admin/places).
+ * Users can wishlist, rate, and mark places as visited.
+ */
 const mongoose = require("mongoose");
 
 const placeSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
 
-    name: {
-        type: String,
-        required: true
-    },
+  shortDescription: {
+    type: String,
+    default: ""
+  },
 
-    shortDescription: String,
+  description: {
+    type: String,
+    default: ""
+  },
 
-    description: String,
+  city: {
+    type: String,
+    default: ""
+  },
 
-    city: String,
+  state: {
+    type: String,
+    default: ""
+  },
 
-    state: String,
+  country: {
+    type: String,
+    default: ""
+  },
 
-    country: String,
+  /** Free-text address / area (e.g. "Citylight, Surat") */
+  location: {
+    type: String,
+    default: ""
+  },
 
-    location: String,
+  imageUrl: {
+    type: String,
+    default: ""
+  },
 
-    imageUrl: String,
+  /** Admin (or user) who created this place */
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
 
-    addedBy: {
+  ratings: [
+    {
+      user: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    },
-
-    ratings: [
-        {
-            user: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "User"
-            },
-            value: {
-                type: Number,
-                min: 1,
-                max: 5
-            },
-            feedback: {
-                type: String,
-                default: ""
-            },
-            createdAt: {
-                type: Date,
-                default: Date.now
-            }
-        }
-    ],
-
-    averageRating: {
+        ref: "User"
+      },
+      value: {
         type: Number,
-        default: 0
-    },
-
-    visitorsCount: {
-        type: Number,
-        default: 0
-    },
-
-    createdAt: {
+        min: 1,
+        max: 5
+      },
+      feedback: {
+        type: String,
+        default: ""
+      },
+      createdAt: {
         type: Date,
         default: Date.now
+      }
     }
+  ],
+
+  averageRating: {
+    type: Number,
+    default: 0
+  },
+
+  /** How many users marked this place as visited */
+  visitorsCount: {
+    type: Number,
+    default: 0
+  },
+
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
+// Explicit collection name "places"
 module.exports = mongoose.model("Place", placeSchema, "places");

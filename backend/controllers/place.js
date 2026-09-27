@@ -1,10 +1,13 @@
+/**
+ * Place controller — public feed, wishlist, ratings.
+ * Place create/edit/delete is admin-only (see controllers/admin.js).
+ */
 const Place = require("../models/place");
 const User = require("../models/user");
-if (process.env.NODE_ENV !== "production") require("dotenv").config();
 
-// ================= Get Places (public feed) =================
-// All places are admin-managed; no user upload / approval queue.
+// ── Public feed ──────────────────────────────────────
 
+/** GET /api/place — list all places (newest first) */
 exports.getPlaces = async (req, res) => {
   try {
     const places = await Place.find({})
@@ -29,8 +32,7 @@ exports.getPlaces = async (req, res) => {
   }
 };
 
-// ================= Get Single Place =================
-
+/** GET /api/place/:id — single place detail */
 exports.getPlaceById = async (req, res) => {
   try {
     const place = await Place.findById(req.params.id)
@@ -59,8 +61,9 @@ exports.getPlaceById = async (req, res) => {
   }
 };
 
-// ================= My Added Places (legacy / profile) =================
+// ── My places (legacy — places this user added) ──────
 
+/** GET /api/place/user/my-places */
 exports.getMyPlaces = async (req, res) => {
   try {
     const places = await Place.find({
@@ -73,19 +76,33 @@ exports.getMyPlaces = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: error.message
     });
   }
 };
 
-// ================= Wishlist =================
+// ── Wishlist ─────────────────────────────────────────
 
+/** POST /api/place/:id/wishlist */
 exports.addWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-    if (user.wishlist.includes(req.params.id)) {
+    const place = await Place.findById(req.params.id);
+    if (!place) {
+      return res.status(404).json({ success: false, message: "Place not found" });
+    }
+
+    const already = (user.wishlist || []).some(
+      (id) => id.toString() === req.params.id
+    );
+    if (already) {
       return res.json({
+        success: true,
         message: "Already in wishlist"
       });
     }
@@ -99,19 +116,23 @@ exports.addWishlist = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: error.message
     });
   }
 };
 
+/** DELETE /api/place/:id/wishlist */
 exports.removeWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-    user.wishlist = user.wishlist.filter(
+    user.wishlist = (user.wishlist || []).filter(
       (id) => id.toString() !== req.params.id
     );
-
     await user.save();
 
     res.json({
@@ -120,11 +141,13 @@ exports.removeWishlist = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: error.message
     });
   }
 };
 
+/** GET /api/place/user/wishlist */
 exports.getWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate(
@@ -144,9 +167,10 @@ exports.getWishlist = async (req, res) => {
   }
 };
 
-// ================= Rating =================
+// ── Rating ───────────────────────────────────────────
 // Body: { value: 1-5, feedback?: string }
 
+/** POST /api/place/:id/rating */
 exports.ratePlace = async (req, res) => {
   try {
     const raw = req.body?.value;
@@ -166,7 +190,7 @@ exports.ratePlace = async (req, res) => {
       return res.status(404).json({ success: false, message: "Place not found" });
     }
 
-    const existing = place.ratings.find(
+    const existing = (place.ratings || []).find(
       (r) => r.user && r.user.toString() === req.user.id
     );
 
@@ -183,6 +207,7 @@ exports.ratePlace = async (req, res) => {
       });
     }
 
+    // Recompute average (1 decimal place)
     const total = place.ratings.reduce((sum, r) => sum + (r.value || 0), 0);
     place.averageRating =
       place.ratings.length > 0
@@ -206,6 +231,7 @@ exports.ratePlace = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: error.message
     });
   }
