@@ -156,7 +156,7 @@
         <div class="upload-box img-panel hidden" id="panelUrl">
           <label for="sourceImageUrl" style="margin-top:0">Paste image URL from anywhere</label>
           <input id="sourceImageUrl" type="url" placeholder="https://example.com/photo.jpg" />
-          <p class="hint">Use a <strong>direct image address</strong> (right‑click photo → Copy image address), not a blog/article page link. We download it via our server → Cloudinary → MongoDB.</p>
+          <p class="hint">Paste any public photo link (Google, blogs, Unsplash…). We try to copy it to Cloudinary; if the site blocks that, we still save the public link so it shows in the app.</p>
           <button type="button" class="secondary" id="previewUrlBtn" style="margin-top:10px;width:auto;padding:10px 14px;font-size:0.9rem">Preview link</button>
         </div>
 
@@ -361,13 +361,13 @@
       }
       const btn = document.getElementById("previewUrlBtn");
       btn.disabled = true;
-      showMsg(placeMsg, "info", "Fetching image via server…");
+      showMsg(placeMsg, "info", "Loading photo…");
       try {
         const cloudUrl = await importRemoteImage(url);
         imageUrlInput.value = cloudUrl;
         setPreviewFromUrl(cloudUrl);
         previewMeta.textContent = "Ready on Cloudinary · " + cloudUrl;
-        showMsg(placeMsg, "ok", "Image imported to Cloudinary. You can save the place now.");
+        showMsg(placeMsg, "ok", "Image ready. You can save the place now.");
       } catch (err) {
         previewWrap.classList.remove("show");
         showMsg(placeMsg, "err", err.message || "Could not load that link");
@@ -501,13 +501,13 @@
             // Already imported via Preview
             setPreviewFromUrl(imageUrl);
           } else {
-            showMsg(placeMsg, "info", "Fetching image via server → Cloudinary…");
+            showMsg(placeMsg, "info", "Loading photo…");
             imageUrl = await importRemoteImage(remoteUrl);
             imageUrlInput.value = imageUrl;
             setPreviewFromUrl(imageUrl);
           }
         } else if (imageUrl && !isCloudinaryUrl(imageUrl)) {
-          showMsg(placeMsg, "info", "Fetching image via server → Cloudinary…");
+          showMsg(placeMsg, "info", "Loading photo…");
           imageUrl = await importRemoteImage(imageUrl);
           imageUrlInput.value = imageUrl;
           setPreviewFromUrl(imageUrl);

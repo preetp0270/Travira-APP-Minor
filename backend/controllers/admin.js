@@ -496,17 +496,22 @@ exports.importImageFromUrl = async (req, res) => {
   try {
     const url = req.body?.url;
     const result = await importRemoteImage(url);
+    const viaCloudinary = result.source !== "direct";
     res.json({
       success: true,
       imageUrl: result.imageUrl,
       source: result.source,
-      message: "Image imported to Cloudinary"
+      message:
+        result.message ||
+        (viaCloudinary
+          ? "Image ready"
+          : "Public image link saved (will show in the app)")
     });
   } catch (error) {
     const status = error.status || 500;
     res.status(status).json({
       success: false,
-      message: error.message || "Image import failed"
+      message: error.message || "Could not use that link. Try another photo link or upload a file."
     });
   }
 };
