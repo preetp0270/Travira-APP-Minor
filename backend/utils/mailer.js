@@ -2,12 +2,15 @@
  * Email for Travira.
  *
  * Render FREE tier blocks SMTP ports 25/465/587 → Gmail SMTP will timeout.
- * Use Resend (HTTPS API) instead:
- *   RESEND_API_KEY=re_xxxxx
- *   EMAIL_FROM=Travira <onboarding@resend.dev>   (or your verified domain)
  *
- * Optional SMTP (only works on paid Render instance):
- *   EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, EMAIL_FROM
+ * Recommended (no domain, send to ANY user, works on Render free):
+ *   BREVO_API_KEY=xkeysib-...
+ *   EMAIL_FROM=Travira <yourgmail@gmail.com>
+ *
+ * Optional:
+ *   SENDGRID_API_KEY=SG.xxx     (verify a Single Sender in SendGrid)
+ *   RESEND_API_KEY=re_xxx       (without a domain: only your own email)
+ *   EMAIL_HOST/USER/PASS        (SMTP — only if host allows it)
  *
  * APP_BASE_URL=https://travira-app-minor.onrender.com
  */
@@ -30,10 +33,34 @@ function appBaseUrl() {
 
 function fromAddress() {
   return String(
-    process.env.EMAIL_FROM ||
-      process.env.EMAIL_USER ||
-      "Travira <onboarding@resend.dev>"
+    process.env.EMAIL_FROM || process.env.EMAIL_USER || ""
   ).trim();
+}
+
+function fromParts() {
+  const raw = fromAddress();
+  const m = raw.match(/^(.*)<([^>]+)>$/);
+  if (m) {
+    return {
+      name: m[1].trim().replace(/^["']|["']$/g, "") || "Travira",
+      email: m[2].trim()
+    };
+  }
+  if (raw.includes("@")) return { name: "Travira", email: raw };
+  return { name: "Travira", email: raw };
+}
+
+function maskEmail(value) {
+  const s = String(value || "");
+  return s.replace(/(.{2}).+(@.+)/, "$1***$2") || null;
+}
+
+function brevoConfigured() {
+  return Boolean(String(process.env.BREVO_API_KEY || "").trim());
+}
+
+function sendgridConfigured() {
+  return Boolean(String(process.env.SENDGRID_API_KEY || "").trim());
 }
 
 function resendConfigured() {
@@ -47,7 +74,20 @@ function smtpConfigured() {
 }
 
 function envConfigured() {
-  return resendConfigured() || smtpConfigured();
+  return (
+    brevoConfigured() ||
+    sendgridConfigured() ||
+    resendConfigured() ||
+    smtpConfigured()
+  );
+}
+
+function activeProviderName() {
+  if (brevoConfigured()) return "brevo";
+  if (sendgridConfigured()) return "sendgrid";
+  if (resendConfigured()) return "resend";
+  if (smtpConfigured()) return "smtp";
+  return null;
 }
 
 function getTransporter() {
@@ -82,46 +122,119 @@ function getTransporter() {
   }
 }
 
-/**
- * Send via Resend HTTPS API (works on Render free tier).
- * https://resend.com/docs/api-reference/emails/send-email
- */
-async function sendViaResend({ to, subject, html, text }) {
-  const apiKey = String(process.env.RESEND_API_KEY || "").trim();
-  if (!apiKey) {
-    return { sent: false, reason: "RESEND_API_KEY not set" };
+function extractError(data, fallback) {
+  if (!data) return fallback;
+  if (typeof data.message === "string") return data.message;
+  if (typeof data.error === "string") return data.error;
+  if (Array.isArray(data.errors) && data.errors[0]) {
+    const e = data.errors[0];
+    return e.message || JSON.stringify(e);
+  }
+  try {
+    return JSON.stringify(data);
+  } catch {
+    return fallback;
+  }
+}
+
+async function sendViaBrevo({ to, subject, html, text }) {
+  const apiKey = String(process.env.BREVO_API_KEY || "").trim();
+  if (!apiKey) return { sent: false, reason: "BREVO_API_KEY not set" };
+  const from = fromParts();
+  if (!from.email || !from.email.includes("@")) {
+    return {
+      sent: false,
+      reason: "Set EMAIL_FROM to your verified Brevo sender, e.g. Travira <you@gmail.com>"
+    };
   }
 
-  const body = {
-    from: fromAddress(),
-    to: [to],
-    subject,
-    html: html || undefined,
-    text: text || subject
-  };
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "api-key": apiKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      sender: { name: from.name, email: from.email },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html || `<p>${text || subject}</p>`,
+      textContent: text || subject
+    }),
+    signal: AbortSignal.timeout(20000)
+  });
 
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { sent: false, reason: extractError(data, "Brevo HTTP " + res.status) };
+  }
+  return { sent: true, id: data.messageId };
+}
+
+async function sendViaSendgrid({ to, subject, html, text }) {
+  const apiKey = String(process.env.SENDGRID_API_KEY || "").trim();
+  if (!apiKey) return { sent: false, reason: "SENDGRID_API_KEY not set" };
+  const from = fromParts();
+  if (!from.email || !from.email.includes("@")) {
+    return {
+      sent: false,
+      reason: "Set EMAIL_FROM to your verified SendGrid Single Sender"
+    };
+  }
+
+  const content = [];
+  if (text) content.push({ type: "text/plain", value: text });
+  if (html) content.push({ type: "text/html", value: html });
+  if (!content.length) content.push({ type: "text/plain", value: subject });
+
+  const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: from.email, name: from.name },
+      subject,
+      content
+    }),
+    signal: AbortSignal.timeout(20000)
+  });
+
+  if (res.status === 202 || res.status === 200) {
+    return { sent: true };
+  }
+  const data = await res.json().catch(() => ({}));
+  return { sent: false, reason: extractError(data, "SendGrid HTTP " + res.status) };
+}
+
+async function sendViaResend({ to, subject, html, text }) {
+  const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+  if (!apiKey) return { sent: false, reason: "RESEND_API_KEY not set" };
+
+  const from = fromAddress() || "Travira <onboarding@resend.dev>";
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: "Bearer " + apiKey,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject,
+      html: html || undefined,
+      text: text || subject
+    }),
     signal: AbortSignal.timeout(20000)
   });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const reason =
-      (data && data.message) ||
-      (data && data.error) ||
-      "Resend HTTP " + res.status;
-    return {
-      sent: false,
-      reason: typeof reason === "string" ? reason : JSON.stringify(reason)
-    };
+    return { sent: false, reason: extractError(data, "Resend HTTP " + res.status) };
   }
-
   return { sent: true, id: data.id };
 }
 
@@ -135,7 +248,7 @@ async function sendViaSmtp({ to, subject, html, text }) {
   }
   try {
     const info = await t.sendMail({
-      from: fromAddress(),
+      from: fromAddress() || process.env.EMAIL_USER,
       to,
       subject,
       html,
@@ -145,16 +258,35 @@ async function sendViaSmtp({ to, subject, html, text }) {
   } catch (e) {
     transporter = null;
     const msg = e.message || String(e);
-    // Helpful hint when Render free blocks SMTP
     if (/timeout|ETIMEDOUT|ECONNREFUSED|network is unreachable/i.test(msg)) {
       return {
         sent: false,
         reason:
           msg +
-          " — Render free tier blocks SMTP ports. Set RESEND_API_KEY (https://resend.com) instead."
+          " — Render free blocks SMTP ports. Use BREVO_API_KEY (https://app.brevo.com) instead of Gmail SMTP."
       };
     }
     return { sent: false, reason: msg };
+  }
+}
+
+async function tryProvider(name, fn, payload) {
+  lastProvider = name;
+  try {
+    const result = await fn(payload);
+    if (result.sent) {
+      lastSuccessAt = new Date().toISOString();
+      lastError = null;
+      console.log(`[mail] ${name} OK to ${payload.to}: ${payload.subject} id=${result.id || "?"}`);
+      return { sent: true };
+    }
+    lastError = result.reason;
+    console.error(`[mail] ${name} failed:`, result.reason);
+    return { sent: false, reason: result.reason };
+  } catch (e) {
+    lastError = e.message || String(e);
+    console.error(`[mail] ${name} error:`, lastError);
+    return { sent: false, reason: lastError };
   }
 }
 
@@ -164,93 +296,91 @@ async function sendViaSmtp({ to, subject, html, text }) {
 async function sendMail({ to, subject, html, text }) {
   if (!envConfigured()) {
     lastError =
-      "No email provider. Set RESEND_API_KEY (recommended on Render free) or EMAIL_HOST/USER/PASS.";
+      "No email provider. Set BREVO_API_KEY (recommended on Render free) or SENDGRID_API_KEY.";
     console.warn(`[mail] skipped. To=${to} Subject=${subject}`);
     return { sent: false, reason: lastError };
   }
 
-  // Prefer Resend on free hosting (HTTPS, not blocked)
-  if (resendConfigured()) {
-    lastProvider = "resend";
-    try {
-      const result = await sendViaResend({ to, subject, html, text });
-      if (result.sent) {
-        lastSuccessAt = new Date().toISOString();
-        lastError = null;
-        console.log(`[mail] resend OK to ${to}: ${subject} id=${result.id || "?"}`);
-        return { sent: true };
-      }
-      lastError = result.reason;
-      console.error("[mail] resend failed:", result.reason);
-      // Fall through to SMTP if also configured
-      if (!smtpConfigured()) {
-        return { sent: false, reason: result.reason };
-      }
-    } catch (e) {
-      lastError = e.message || String(e);
-      console.error("[mail] resend error:", lastError);
-      if (!smtpConfigured()) {
-        return { sent: false, reason: lastError };
-      }
-    }
-  }
+  const payload = { to, subject, html, text };
+  const chain = [];
+  if (brevoConfigured()) chain.push(["brevo", sendViaBrevo]);
+  if (sendgridConfigured()) chain.push(["sendgrid", sendViaSendgrid]);
+  if (resendConfigured()) chain.push(["resend", sendViaResend]);
+  if (smtpConfigured()) chain.push(["smtp", sendViaSmtp]);
 
-  if (smtpConfigured()) {
-    lastProvider = "smtp";
-    const result = await sendViaSmtp({ to, subject, html, text });
-    if (result.sent) {
-      lastSuccessAt = new Date().toISOString();
-      lastError = null;
-      console.log(`[mail] smtp OK to ${to}: ${subject}`);
-      return { sent: true };
-    }
-    lastError = result.reason;
-    console.error("[mail] smtp failed:", result.reason);
-    return { sent: false, reason: result.reason };
+  let lastFail = null;
+  for (const [name, fn] of chain) {
+    const result = await tryProvider(name, fn, payload);
+    if (result.sent) return { sent: true };
+    lastFail = result.reason;
   }
-
-  return { sent: false, reason: lastError || "Email send failed" };
+  return { sent: false, reason: lastFail || lastError || "Email send failed" };
 }
 
 async function verifyMail() {
+  if (brevoConfigured()) {
+    lastProvider = "brevo";
+    try {
+      const res = await fetch("https://api.brevo.com/v3/account", {
+        headers: {
+          accept: "application/json",
+          "api-key": String(process.env.BREVO_API_KEY).trim()
+        },
+        signal: AbortSignal.timeout(15000)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        return { ok: true, provider: "brevo", note: "Brevo API key valid" };
+      }
+      return { ok: false, reason: extractError(data, "Brevo HTTP " + res.status) };
+    } catch (e) {
+      return { ok: false, reason: e.message || String(e) };
+    }
+  }
+
+  if (sendgridConfigured()) {
+    lastProvider = "sendgrid";
+    try {
+      const res = await fetch("https://api.sendgrid.com/v3/user/account", {
+        headers: {
+          Authorization: "Bearer " + String(process.env.SENDGRID_API_KEY).trim()
+        },
+        signal: AbortSignal.timeout(15000)
+      });
+      if (res.ok) {
+        return { ok: true, provider: "sendgrid", note: "SendGrid API key valid" };
+      }
+      const data = await res.json().catch(() => ({}));
+      return { ok: false, reason: extractError(data, "SendGrid HTTP " + res.status) };
+    } catch (e) {
+      return { ok: false, reason: e.message || String(e) };
+    }
+  }
+
   if (resendConfigured()) {
     lastProvider = "resend";
     const key = String(process.env.RESEND_API_KEY || "").trim();
-    // Sending-only keys cannot call /domains — that is normal and OK for Travira.
-    // We only need the key to POST /emails.
     if (!key.startsWith("re_")) {
-      return {
-        ok: false,
-        reason: "RESEND_API_KEY should start with re_"
-      };
+      return { ok: false, reason: "RESEND_API_KEY should start with re_" };
     }
     try {
-      // Lightweight reachability check against Resend API (not domains).
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           Authorization: "Bearer " + key,
           "Content-Type": "application/json"
         },
-        // Invalid body on purpose — we only care that the key is accepted for sending
         body: JSON.stringify({}),
         signal: AbortSignal.timeout(15000)
       });
       const data = await res.json().catch(() => ({}));
       const msg = String(data.message || data.error || "");
-
-      // Missing required fields → key is valid for sending
       if (
         res.status === 422 ||
         /required|validation|from|to|subject/i.test(msg)
       ) {
-        return {
-          ok: true,
-          provider: "resend",
-          note: "API key can send emails"
-        };
+        return { ok: true, provider: "resend", note: "API key can send emails" };
       }
-      // Explicit send-only restriction on other endpoints — still OK
       if (/restricted to only send/i.test(msg)) {
         return {
           ok: true,
@@ -264,7 +394,6 @@ async function verifyMail() {
           reason: msg || "Resend API key rejected — create a new Sending key"
         };
       }
-      // Any other response that is not auth failure still means network + key path works
       if (res.status < 500) {
         return { ok: true, provider: "resend", note: msg || "Resend reachable" };
       }
@@ -289,7 +418,7 @@ async function verifyMail() {
           ok: false,
           reason:
             msg +
-            " — Render free blocks SMTP. Use RESEND_API_KEY instead of Gmail SMTP."
+            " — Render free blocks SMTP. Use BREVO_API_KEY instead of Gmail SMTP."
         };
       }
       return { ok: false, reason: msg };
@@ -298,25 +427,30 @@ async function verifyMail() {
 
   return {
     ok: false,
-    reason: "Set RESEND_API_KEY (recommended) or EMAIL_HOST/USER/PASS"
+    reason: "Set BREVO_API_KEY (recommended, no domain) or SENDGRID_API_KEY"
   };
 }
 
 function mailStatus() {
+  const provider = activeProviderName();
+  const from = fromParts();
   return {
+    mailCodeVersion: "2026-09-27-mail-brevo-v6",
     configured: envConfigured(),
-    provider: resendConfigured() ? "resend" : smtpConfigured() ? "smtp" : null,
-    emailUser: process.env.EMAIL_USER
-      ? String(process.env.EMAIL_USER).replace(/(.{2}).+(@.+)/, "$1***$2")
-      : resendConfigured()
-        ? "resend"
-        : null,
+    provider,
+    hasBrevoKey: brevoConfigured(),
+    emailUser: maskEmail(from.email || process.env.EMAIL_USER),
     lastError: lastError || null,
     lastSuccessAt: lastSuccessAt || null,
     lastProvider: lastProvider || null,
-    note: resendConfigured()
-      ? null
-      : "Render free tier blocks SMTP. Set RESEND_API_KEY from https://resend.com"
+    note:
+      provider === "brevo" || provider === "sendgrid"
+        ? "HTTPS API — works on Render free. EMAIL_FROM must be your verified sender Gmail."
+        : provider === "resend"
+          ? "Resend without a domain can only send to your own Resend account email."
+          : provider === "smtp"
+            ? "Render free blocks SMTP ports. Prefer BREVO_API_KEY."
+            : "Set BREVO_API_KEY from https://app.brevo.com/settings/keys/api"
   };
 }
 
@@ -358,10 +492,10 @@ function resetPasswordHtml(name, link) {
 
 function escapeHtml(s) {
   return String(s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/&/g, "\u0026amp;")
+    .replace(/</g, "\u0026lt;")
+    .replace(/>/g, "\u0026gt;")
+    .replace(/"/g, "\u0026quot;");
 }
 
 module.exports = {

@@ -1,10 +1,10 @@
-if (process.env.NODE_ENV !== "production") require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const express = require("express");
 const cors = require("cors");
 const dns = require("dns");
 const mongoose = require("mongoose");
-const path = require("path");
 
 const placeRoutes = require("./routes/placeroute");
 const userRoutes = require("./routes/user");
@@ -51,7 +51,7 @@ function healthHandler(req, res) {
     success: true,
     status: "ok",
     service: "travira",
-    version: "2026-09-27-mail-resend-v5",
+    version: "2026-09-27-mail-brevo-v6",
     ts: Date.now(),
     uptime: process.uptime(),
     mongoConfigured: Boolean(process.env.MONGODB_URI),
@@ -86,7 +86,8 @@ app.get("/api/health/email", async (req, res) => {
     res.status(200).json({
       success: true,
       smtpOk: result.ok,
-      reason: result.reason || null,
+      reason: result.reason || result.note || null,
+      version: "2026-09-27-mail-brevo-v6",
       ...mailStatus()
     });
   } catch (e) {

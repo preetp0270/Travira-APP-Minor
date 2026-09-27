@@ -167,7 +167,14 @@ exports.forgotPassword = async (req, res) => {
 
     const link = `${appBaseUrl()}/reset-password.html?token=${token}`;
     // Do not log the full token/link (security)
-    console.log(`[forgot-password] requested for ${user.email} emailWillSend=${Boolean(process.env.EMAIL_HOST)}`);
+    console.log(
+      `[forgot-password] requested for ${user.email} emailWillSend=${Boolean(
+        process.env.BREVO_API_KEY ||
+          process.env.SENDGRID_API_KEY ||
+          process.env.RESEND_API_KEY ||
+          process.env.EMAIL_HOST
+      )}`
+    );
 
     const mailResult = await sendMail({
       to: user.email,

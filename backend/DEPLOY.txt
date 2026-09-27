@@ -4,19 +4,27 @@ Travira Backend — deploy checklist (Render)
 EMAIL ON RENDER FREE TIER
 -------------------------
 Render free services BLOCK outbound SMTP (ports 25, 465, 587).
-Gmail SMTP will always "Connection timeout".
+Gmail SMTP will always "Connection timeout". Do not use EMAIL_HOST on Render free.
 
-Use Resend (free tier, HTTPS API):
-  1) Sign up https://resend.com
-  2) Create API key
-  3) On Render set:
-       RESEND_API_KEY=re_xxxx
-       EMAIL_FROM=Travira <onboarding@resend.dev>
-  4) Redeploy
-  5) Test: GET /api/health/email  → smtpOk true (provider resend)
+Use Brevo HTTPS API (free, 300 emails/day, NO domain required):
+  1) Sign up https://app.brevo.com  (no credit card)
+  2) Senders: add YOUR Gmail as a sender and click the verification link
+     in that Gmail inbox
+  3) SMTP & API → API keys → create a key
+  4) On Render Environment:
+       BREVO_API_KEY=xkeysib-xxxxxxxx
+       EMAIL_FROM=Travira <yourgmail@gmail.com>
+       APP_BASE_URL=https://travira-app-minor.onrender.com
+     Remove RESEND_API_KEY (or leave it; Brevo is tried first)
+  5) Redeploy
+  6) Test: GET /api/health/email  → smtpOk true, provider "brevo"
+  7) Forgot-password with any registered user email
 
-  Note: with onboarding@resend.dev you can only send TO your own Resend account email
-  until you verify a domain. For production, add a domain in Resend.
+Optional SendGrid (HTTPS, also works on Render free):
+  SENDGRID_API_KEY=SG.xxx
+  Verify a Single Sender (your Gmail) in SendGrid, then same EMAIL_FROM.
+
+Resend without a domain can only send TO your own Resend account email.
 
 Other env:
   MONGODB_URI, JWT_SECRET, JWT_REFRESH_SECRET
