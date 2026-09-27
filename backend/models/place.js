@@ -82,7 +82,28 @@ const placeSchema = new mongoose.Schema({
     default: 0
   },
 
-  /** How many users marked this place as visited */
+  /**
+   * Sample / AI base visitor number. Never overwritten by user mark/unmark.
+   * Displayed visitorsCount = baseVisitorsCount + real User.visitedPlaces count.
+   */
+  baseVisitorsCount: {
+    type: Number,
+    default: 0
+  },
+
+  /**
+   * Sample / AI base review count. Displayed ratingsCount =
+   * baseRatingsCount + place.ratings.length
+   */
+  baseRatingsCount: {
+    type: Number,
+    default: 0
+  },
+
+  /**
+   * Cached displayed visitor total (base + real). Updated on mark/unmark.
+   * Prefer reading via withLiveStats which always recomputes from base + live.
+   */
   visitorsCount: {
     type: Number,
     default: 0

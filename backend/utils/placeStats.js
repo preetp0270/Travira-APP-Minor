@@ -1,15 +1,18 @@
 /**
- * Place stats helpers — visitors & ratings from real data (not seed numbers).
+ * Place stats helpers — sample/base numbers + real user actions.
  *
- * visitorsCount  = how many users have this place in visitedPlaces
- * ratingsCount   = place.ratings.length
- * averageRating  = mean of rating values (1 decimal)
+ * visitorsCount (displayed) = baseVisitorsCount + real users who marked visited
+ * ratingsCount  (displayed) = baseRatingsCount  + place.ratings.length
+ * averageRating             = real average if any ratings exist, else seed averageRating
+ *
+ * base* fields are set from AI/sample data and never overwritten by user toggles.
+ * Legacy docs without base*: first sync recovers base from stored visitorsCount − real.
  */
 const mongoose = require("mongoose");
 const User = require("../models/user");
 const Place = require("../models/place");
 
-/** Count users who marked a place as visited */
+/** Count users who marked a place as visited (real only) */
 async function countVisitors(placeId) {
   if (!placeId) return 0;
   const id =
@@ -19,7 +22,7 @@ async function countVisitors(placeId) {
   return User.countDocuments({ "visitedPlaces.place": id });
 }
 
-/** Map placeId(string) → visitor count for many places (one aggregation) */
+/** Map placeId(string) → real visitor count for many places (one aggregation) */
 async function visitorCountMap(placeIds) {
   const ids = (placeIds || [])
     .filter(Boolean)
@@ -43,7 +46,7 @@ async function visitorCountMap(placeIds) {
   return map;
 }
 
-/** Average + count from ratings array */
+/** Average + count from ratings array (real reviews only) */
 function ratingStats(ratings) {
   const list = Array.isArray(ratings) ? ratings : [];
   const ratingsCount = list.length;
@@ -56,13 +59,70 @@ function ratingStats(ratings) {
 }
 
 /**
- * Recompute visitorsCount on the Place document from User data and save.
- * Returns the true count.
+ * Resolve base visitors from place doc (never the live total).
+ */
+function baseVisitors(place) {
+  if (!place) return 0;
+  if (typeof place.baseVisitorsCount === "number" && place.baseVisitorsCount >= 0) {
+    return place.baseVisitorsCount;
+  }
+  return 0;
+}
+
+function baseRatings(place) {
+  if (!place) return 0;
+  if (typeof place.baseRatingsCount === "number" && place.baseRatingsCount >= 0) {
+    return place.baseRatingsCount;
+  }
+  return 0;
+}
+
+/**
+ * Ensure place has baseVisitorsCount set (one-time recover for legacy docs).
+ * Returns { base, real, displayed }.
+ */
+async function resolveVisitorTotals(placeId) {
+  const place = await Place.findById(placeId).select(
+    "visitorsCount baseVisitorsCount"
+  );
+  if (!place) {
+    const real = await countVisitors(placeId);
+    return { base: 0, real, displayed: real };
+  }
+
+  const real = await countVisitors(placeId);
+  let base = baseVisitors(place);
+
+  // Legacy migration: no baseVisitorsCount yet
+  if (
+    (place.baseVisitorsCount == null ||
+      typeof place.baseVisitorsCount !== "number") &&
+    typeof place.visitorsCount === "number"
+  ) {
+    const stored = place.visitorsCount;
+    // If stored looks like a previous displayed total, peel off real
+    base = stored >= real ? stored - real : stored;
+    await Place.findByIdAndUpdate(placeId, {
+      $set: { baseVisitorsCount: base, visitorsCount: base + real }
+    });
+  }
+
+  const displayed = base + real;
+  if (place.visitorsCount !== displayed) {
+    await Place.findByIdAndUpdate(placeId, {
+      $set: { visitorsCount: displayed }
+    });
+  }
+  return { base, real, displayed };
+}
+
+/**
+ * Displayed visitors = base (sample) + real user marks.
+ * Migrates legacy docs to baseVisitorsCount on first call.
  */
 async function syncVisitorsCount(placeId) {
-  const count = await countVisitors(placeId);
-  await Place.findByIdAndUpdate(placeId, { $set: { visitorsCount: count } });
-  return count;
+  const { displayed } = await resolveVisitorTotals(placeId);
+  return displayed;
 }
 
 /**
@@ -72,21 +132,52 @@ async function syncVisitorsCount(placeId) {
 function withLiveStats(place, visitMap) {
   if (!place) return place;
   const id = String(place._id);
-  const { averageRating, ratingsCount } = ratingStats(place.ratings);
-  const visitorsCount =
-    visitMap && Object.prototype.hasOwnProperty.call(visitMap, id)
-      ? visitMap[id]
-      : typeof place.visitorsCount === "number"
-        ? place.visitorsCount
+
+  const realRatings = ratingStats(place.ratings);
+  const baseR = baseRatings(place);
+  const ratingsCount = baseR + realRatings.ratingsCount;
+
+  const seedAvg =
+    typeof place.averageRating === "number" && place.averageRating > 0
+      ? place.averageRating
+      : typeof place.rating === "number" && place.rating > 0
+        ? place.rating
         : 0;
+  const averageRating =
+    realRatings.ratingsCount > 0 ? realRatings.averageRating : seedAvg;
+
+  const realVisitors =
+    visitMap && Object.prototype.hasOwnProperty.call(visitMap, id)
+      ? visitMap[id] || 0
+      : null;
+
+  let visitorsCount;
+  if (realVisitors !== null) {
+    let base;
+    if (
+      typeof place.baseVisitorsCount === "number" &&
+      place.baseVisitorsCount >= 0
+    ) {
+      base = place.baseVisitorsCount;
+    } else if (typeof place.visitorsCount === "number") {
+      // Recover once for response (syncVisitorsCount persists it)
+      const stored = place.visitorsCount;
+      base = stored >= realVisitors ? stored - realVisitors : stored;
+    } else {
+      base = 0;
+    }
+    visitorsCount = base + realVisitors;
+  } else {
+    visitorsCount =
+      typeof place.visitorsCount === "number" ? place.visitorsCount : 0;
+  }
 
   return {
     ...place,
     averageRating,
-    // So Android displayRating prefers real average over old seed `rating`
     rating: averageRating,
     ratingsCount,
-    visitorsCount: visitMap ? visitorsCount || 0 : visitorsCount
+    visitorsCount
   };
 }
 
@@ -95,5 +186,8 @@ module.exports = {
   visitorCountMap,
   ratingStats,
   syncVisitorsCount,
-  withLiveStats
+  withLiveStats,
+  baseVisitors,
+  baseRatings,
+  resolveVisitorTotals
 };

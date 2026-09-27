@@ -573,7 +573,7 @@ exports.addVisitedPlace = async (req, res) => {
     user.visitedPlaces.push({ place: placeId, visitedAt: new Date() });
     await user.save();
 
-    // Source of truth = number of users with this place in visitedPlaces
+    // Displayed = baseVisitorsCount (sample) + real users who marked visited
     const visitorsCount = await syncVisitorsCount(placeId);
 
     res.json({
@@ -600,7 +600,7 @@ exports.removeVisitedPlace = async (req, res) => {
     );
     await user.save();
 
-    // Recompute from all users (never use seed ± 1)
+    // Displayed = baseVisitorsCount (sample) + remaining real visitors
     const visitorsCount = await syncVisitorsCount(placeId);
 
     res.json({

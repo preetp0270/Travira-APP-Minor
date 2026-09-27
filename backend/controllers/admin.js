@@ -16,7 +16,12 @@ const PLACE_UPDATE_FIELDS = [
   "state",
   "country",
   "location",
-  "imageUrl"
+  "imageUrl",
+  // Sample / AI stats (base numbers users build on top of)
+  "baseVisitorsCount",
+  "baseRatingsCount",
+  "visitorsCount",
+  "averageRating"
 ];
 
 // ── Places ───────────────────────────────────────────
@@ -55,17 +60,19 @@ exports.getPlaceAdminDetail = async (req, res) => {
 
     const wishlistCount = await User.countDocuments({ wishlist: place._id });
     const visitMap = await visitorCountMap([place._id]);
-    const { averageRating, ratingsCount } = ratingStats(place.ratings);
-    const visitorsCount = visitMap[String(place._id)] || 0;
+    const lean = place.toObject ? place.toObject() : place;
+    const live = withLiveStats(lean, visitMap);
 
     res.json({
       success: true,
-      place,
+      place: live,
       stats: {
-        visitorsCount,
-        averageRating,
-        ratingsCount,
-        wishlistCount
+        visitorsCount: live.visitorsCount,
+        averageRating: live.averageRating,
+        ratingsCount: live.ratingsCount,
+        wishlistCount,
+        baseVisitorsCount: lean.baseVisitorsCount || 0,
+        baseRatingsCount: lean.baseRatingsCount || 0
       }
     });
   } catch (error) {
@@ -84,6 +91,26 @@ exports.updateAnyPlace = async (req, res) => {
     const updates = {};
     for (const key of PLACE_UPDATE_FIELDS) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+
+    // Keep base + displayed in sync when admin/AI sets sample visitor numbers
+    if (updates.visitorsCount != null && updates.baseVisitorsCount == null) {
+      const n = Number(updates.visitorsCount);
+      if (Number.isFinite(n) && n >= 0) {
+        updates.baseVisitorsCount = n;
+        updates.visitorsCount = n;
+      }
+    }
+    if (updates.baseVisitorsCount != null) {
+      const n = Number(updates.baseVisitorsCount);
+      if (Number.isFinite(n) && n >= 0) {
+        updates.baseVisitorsCount = n;
+        if (updates.visitorsCount == null) updates.visitorsCount = n;
+      }
+    }
+    if (updates.baseRatingsCount != null) {
+      const n = Number(updates.baseRatingsCount);
+      if (Number.isFinite(n) && n >= 0) updates.baseRatingsCount = n;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -148,6 +175,26 @@ exports.adminAddPlace = async (req, res) => {
     for (const key of PLACE_UPDATE_FIELDS) {
       if (key === "name") continue;
       if (req.body[key] !== undefined) payload[key] = req.body[key];
+    }
+
+    // Sample/AI numbers become the permanent base; live users add on top.
+    if (payload.visitorsCount != null && payload.baseVisitorsCount == null) {
+      const n = Number(payload.visitorsCount);
+      if (Number.isFinite(n) && n >= 0) {
+        payload.baseVisitorsCount = n;
+        payload.visitorsCount = n; // initial displayed = base (0 real yet)
+      }
+    }
+    if (payload.baseVisitorsCount != null) {
+      const n = Number(payload.baseVisitorsCount);
+      if (Number.isFinite(n) && n >= 0) {
+        payload.baseVisitorsCount = n;
+        if (payload.visitorsCount == null) payload.visitorsCount = n;
+      }
+    }
+    if (payload.baseRatingsCount != null) {
+      const n = Number(payload.baseRatingsCount);
+      if (Number.isFinite(n) && n >= 0) payload.baseRatingsCount = n;
     }
 
     const place = new Place(payload);

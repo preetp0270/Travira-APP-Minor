@@ -2,8 +2,9 @@
  * Place controller — public feed, wishlist, ratings.
  * Place create/edit/delete is admin-only (see controllers/admin.js).
  *
- * visitorsCount = real count of users who marked visited (not seed data)
- * ratingsCount / averageRating = derived from place.ratings[]
+ * visitorsCount = baseVisitorsCount (sample/AI) + real users who marked visited
+ * ratingsCount  = baseRatingsCount (sample/AI) + place.ratings.length
+ * averageRating = real average if any ratings, else seed averageRating
  */
 const Place = require("../models/place");
 const User = require("../models/user");
@@ -218,32 +219,27 @@ exports.ratePlace = async (req, res) => {
       });
     }
 
-    // Always derive average from ratings array (source of truth)
-    const { averageRating, ratingsCount } = ratingStats(place.ratings);
-    place.averageRating = averageRating;
+    // Real average from ratings array; displayed counts include sample base
+    const { averageRating: realAvg } = ratingStats(place.ratings);
+    if (realAvg > 0) place.averageRating = realAvg;
     await place.save();
 
-    // Live visitors from real visits (not seed)
     const visitMap = await visitorCountMap([place._id]);
-    const visitorsCount = visitMap[String(place._id)] || 0;
-    // Keep stored field in sync for other readers
-    if (place.visitorsCount !== visitorsCount) {
-      place.visitorsCount = visitorsCount;
-      await place.save();
-    }
+    const lean = place.toObject ? place.toObject() : place;
+    const live = withLiveStats(lean, visitMap);
 
     res.json({
       success: true,
       message: existing ? "Rating updated" : "Rating submitted",
-      averageRating,
-      ratingsCount,
-      visitorsCount,
+      averageRating: live.averageRating,
+      ratingsCount: live.ratingsCount,
+      visitorsCount: live.visitorsCount,
       place: {
         _id: place._id,
-        averageRating,
-        rating: averageRating,
-        visitorsCount,
-        ratingsCount
+        averageRating: live.averageRating,
+        rating: live.averageRating,
+        visitorsCount: live.visitorsCount,
+        ratingsCount: live.ratingsCount
       }
     });
   } catch (error) {
