@@ -18,7 +18,8 @@ const {
   getUserDetail,
   adminCreateUser,
   adminUpdateUser,
-  adminDeleteUser
+  adminDeleteUser,
+  importImageFromUrl
 } = require("../controllers/admin");
 
 router.use(authMiddleware, adminMiddleware);
@@ -29,6 +30,9 @@ router.get("/places/:id", getPlaceAdminDetail);
 router.put("/places/:id", updateAnyPlace);
 router.delete("/places/:id", deleteAnyPlace);
 router.post("/places", adminAddPlace);
+
+// Image: fetch remote URL → Cloudinary (handles many 403 cases + HTML og:image)
+router.post("/import-image", importImageFromUrl);
 
 // Users
 router.get("/users", getUsers);

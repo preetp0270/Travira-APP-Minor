@@ -194,3 +194,15 @@ data class AdminUserDetailResponse(
     val passwordNote: String? = null,
     val message: String? = null
 )
+
+
+data class ImportImageRequest(
+    val url: String
+)
+
+data class ImportImageResponse(
+    val success: Boolean = false,
+    val imageUrl: String? = null,
+    val source: String? = null,
+    val message: String? = null
+)

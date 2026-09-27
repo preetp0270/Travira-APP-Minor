@@ -6,6 +6,7 @@ const Place = require("../models/place");
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const { visitorCountMap, withLiveStats, ratingStats } = require("../utils/placeStats");
+const { importImageFromUrl: importRemoteImage } = require("../utils/imageImport");
 
 // Fields admins are allowed to set on a place (prevents overwriting ratings etc.)
 const PLACE_UPDATE_FIELDS = [
@@ -486,5 +487,26 @@ exports.bootstrapRegisterAdmin = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+/** POST /api/admin/import-image  Body: { url: string } */
+exports.importImageFromUrl = async (req, res) => {
+  try {
+    const url = req.body?.url;
+    const result = await importRemoteImage(url);
+    res.json({
+      success: true,
+      imageUrl: result.imageUrl,
+      source: result.source,
+      message: "Image imported to Cloudinary"
+    });
+  } catch (error) {
+    const status = error.status || 500;
+    res.status(status).json({
+      success: false,
+      message: error.message || "Image import failed"
+    });
   }
 };

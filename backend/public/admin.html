@@ -156,7 +156,7 @@
         <div class="upload-box img-panel hidden" id="panelUrl">
           <label for="sourceImageUrl" style="margin-top:0">Paste image URL from anywhere</label>
           <input id="sourceImageUrl" type="url" placeholder="https://example.com/photo.jpg" />
-          <p class="hint">Any public image link (Google, Unsplash, Wikipedia, CDN…). On save we fetch it into Cloudinary, then store the Cloudinary URL in MongoDB.</p>
+          <p class="hint">Use a <strong>direct image address</strong> (right‑click photo → Copy image address), not a blog/article page link. We download it via our server → Cloudinary → MongoDB.</p>
           <button type="button" class="secondary" id="previewUrlBtn" style="margin-top:10px;width:auto;padding:10px 14px;font-size:0.9rem">Preview link</button>
         </div>
 
@@ -344,20 +344,41 @@
       }
     });
 
-    document.getElementById("previewUrlBtn").addEventListener("click", () => {
+    async function importRemoteImage(url) {
+      const data = await api("/api/admin/import-image", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ url })
+      });
+      return data.imageUrl;
+    }
+
+    document.getElementById("previewUrlBtn").addEventListener("click", async () => {
       const url = sourceImageUrl.value.trim();
       if (!url) {
         showMsg(placeMsg, "err", "Paste an image URL first.");
         return;
       }
-      setPreviewFromUrl(url);
-      previewMeta.textContent = url + " · will fetch into Cloudinary on save";
-      showMsg(placeMsg, "info", "Preview loaded. Save place to upload this link to Cloudinary.");
+      const btn = document.getElementById("previewUrlBtn");
+      btn.disabled = true;
+      showMsg(placeMsg, "info", "Fetching image via server…");
+      try {
+        const cloudUrl = await importRemoteImage(url);
+        imageUrlInput.value = cloudUrl;
+        setPreviewFromUrl(cloudUrl);
+        previewMeta.textContent = "Ready on Cloudinary · " + cloudUrl;
+        showMsg(placeMsg, "ok", "Image imported to Cloudinary. You can save the place now.");
+      } catch (err) {
+        previewWrap.classList.remove("show");
+        showMsg(placeMsg, "err", err.message || "Could not load that link");
+      } finally {
+        btn.disabled = false;
+      }
     });
 
     sourceImageUrl.addEventListener("change", () => {
-      const url = sourceImageUrl.value.trim();
-      if (url) setPreviewFromUrl(url);
+      // Clear previous Cloudinary result when source link changes
+      imageUrlInput.value = "";
     });
 
     (function init() {
@@ -473,20 +494,21 @@
           setPreviewFromUrl(imageUrl);
         } else if (imageMode === "url" && remoteUrl) {
           if (isCloudinaryUrl(remoteUrl)) {
-            // Already on Cloudinary — store as-is
             imageUrl = remoteUrl;
             imageUrlInput.value = imageUrl;
             setPreviewFromUrl(imageUrl);
+          } else if (imageUrl && isCloudinaryUrl(imageUrl)) {
+            // Already imported via Preview
+            setPreviewFromUrl(imageUrl);
           } else {
-            showMsg(placeMsg, "info", "Fetching image URL into Cloudinary…");
-            imageUrl = await uploadToCloudinary(remoteUrl);
+            showMsg(placeMsg, "info", "Fetching image via server → Cloudinary…");
+            imageUrl = await importRemoteImage(remoteUrl);
             imageUrlInput.value = imageUrl;
             setPreviewFromUrl(imageUrl);
           }
         } else if (imageUrl && !isCloudinaryUrl(imageUrl)) {
-          // Final field has an external URL — still push through Cloudinary
-          showMsg(placeMsg, "info", "Fetching image URL into Cloudinary…");
-          imageUrl = await uploadToCloudinary(imageUrl);
+          showMsg(placeMsg, "info", "Fetching image via server → Cloudinary…");
+          imageUrl = await importRemoteImage(imageUrl);
           imageUrlInput.value = imageUrl;
           setPreviewFromUrl(imageUrl);
         }

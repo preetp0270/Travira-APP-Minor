@@ -42,6 +42,13 @@ interface AdminApi {
         @Body body: AddPlaceRequest
     ): PlaceResponse
 
+    /** Fetch remote image URL via server → Cloudinary */
+    @POST("api/admin/import-image")
+    suspend fun importImage(
+        @Header("Authorization") bearer: String,
+        @Body body: ImportImageRequest
+    ): ImportImageResponse
+
     @GET("api/admin/users")
     suspend fun getUsers(
         @Header("Authorization") bearer: String

@@ -281,7 +281,16 @@ fun EditPlaceScreen(
                                 ImageInputMode.URL -> {
                                     val link = imageLink.trim()
                                     if (link.isNotBlank()) {
-                                        imageUrl = CloudinaryUploader.uploadImageFromUrl(link)
+                                        if (CloudinaryUploader.isCloudinaryUrl(link)) {
+                                            imageUrl = link
+                                        } else {
+                                            val imp = RetrofitInstance.adminApi.importImage(
+                                                bearer = "Bearer $token",
+                                                body = com.example.travira.remote.ImportImageRequest(link)
+                                            )
+                                            imageUrl = imp.imageUrl
+                                                ?: throw Exception(imp.message ?: "Image import failed")
+                                        }
                                     }
                                 }
                             }
