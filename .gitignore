@@ -4,6 +4,7 @@
 
 # Gradle
 .gradle/
+__pycache__
 **/build/
 
 # Local files
