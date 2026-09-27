@@ -1,11 +1,5 @@
 package com.example.travira.remote
 
-
-/**
- * Auth & user profile API — /api/users/*
- * Includes login, register, password reset, profile, visited, notifications.
- */
-
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -14,6 +8,10 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 
+/**
+ * Auth and user profile API under api/users.
+ * Covers login, register, password reset, profile, visited, notifications.
+ */
 interface AuthApi {
 
     @POST("api/users/register")
@@ -25,7 +23,7 @@ interface AuthApi {
     @POST("api/users/forgot-password")
     suspend fun forgotPassword(@Body body: ForgotPasswordRequest): SimpleMessageResponse
 
-    /** Alias if /api/users path is missing on an old deploy */
+    // Alias if api/users path is missing on an old deploy
     @POST("api/auth/forgot-password")
     suspend fun forgotPasswordAlt(@Body body: ForgotPasswordRequest): SimpleMessageResponse
 

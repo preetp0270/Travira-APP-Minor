@@ -1,12 +1,9 @@
 package com.example.travira.remote
 
-
-/**
- * Lightweight health endpoints used by ServerKeepAlive
- * to prevent Render free-tier cold starts while the app is open.
- */
-
 import retrofit2.http.GET
+
+// Lightweight health endpoints used by ServerKeepAlive
+// to prevent Render free-tier cold starts while the app is open.
 
 data class HealthResponse(
     val success: Boolean = false,
