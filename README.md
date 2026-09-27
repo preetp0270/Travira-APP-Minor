@@ -23,7 +23,7 @@ Travira is an AI-powered Android travel application that helps users discover po
     * Get directions and location details
     * Explore nearby attractions
 
-* 🤖 **AI Travel Chatbot**(Gemini Flash 3.5)
+* 🤖 **AI Travel Chatbot**(Gemini 3.8 Flash)
 
     * Ask questions about destinations
     * Learn about local culture, traditions, and history

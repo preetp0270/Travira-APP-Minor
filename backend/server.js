@@ -57,7 +57,7 @@ function healthHandler(req, res) {
     mongoConfigured: Boolean(process.env.MONGODB_URI),
     jwtConfigured: Boolean(process.env.JWT_SECRET),
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
-    geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    geminiModel: process.env.GEMINI_MODEL || "gemini-3.8-flash",
     emailConfigured: mail.configured,
     emailUser: mail.emailUser,
     emailLastError: mail.lastError,

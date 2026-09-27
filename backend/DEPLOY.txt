@@ -28,7 +28,7 @@ Resend without a domain can only send TO your own Resend account email.
 
 Other env:
   MONGODB_URI, JWT_SECRET, JWT_REFRESH_SECRET
-  GEMINI_API_KEY, GEMINI_MODEL=gemini-2.5-flash
+  GEMINI_API_KEY, GEMINI_MODEL=gemini-3.8-flash
   APP_BASE_URL=https://travira-app-minor.onrender.com
 
 Start: npm start
