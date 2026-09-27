@@ -58,6 +58,7 @@ function healthHandler(req, res) {
     jwtConfigured: Boolean(process.env.JWT_SECRET),
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
     geminiModel: process.env.GEMINI_MODEL || "gemini-3.8-flash",
+    groqConfigured: Boolean(process.env.GROQ_API_KEY),
     emailConfigured: mail.configured,
     emailUser: mail.emailUser,
     emailLastError: mail.lastError,

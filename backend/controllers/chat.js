@@ -1,11 +1,12 @@
 /**
  * Travira travel chatbot — Gemini 3.8 Flash (permanent default)
  * Env:
- *   GEMINI_API_KEY  (required)
- *   GEMINI_MODEL    (optional; default gemini-3.8-flash)
+ *   GEMINI_API_KEY   (primary)
+ *   GEMINI_MODEL     (optional; default gemini-3.8-flash)
+ *   GROQ_API_KEY     (optional fallback when Gemini quota/key fails)
+ *   GROQ_MODEL       (optional; default llama-3.3-70b-versatile)
  *
- * Free-tier 3.8 Flash is often overloaded (~20 RPD). On 503/429 we retry,
- * then fall back to other free Gemini Flash models.
+ * Order: 3.8 Flash → 3.5 Flash-Lite → other Gemini Flash → Groq Llama
  */
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
@@ -70,6 +71,53 @@ function isNotFound(status, message) {
   );
 }
 
+function isAuthError(status, message) {
+  const m = String(message || "");
+  return (
+    status === 400 ||
+    status === 401 ||
+    status === 403 ||
+    /api key|api_key|invalid key|expired|permission.?denied|unauthenticated|unauthorized/i.test(
+      m
+    )
+  );
+}
+
+async function callGroq(messages) {
+  const apiKey = String(process.env.GROQ_API_KEY || "").trim();
+  if (!apiKey) return { sent: false, reason: "GROQ_API_KEY not set" };
+
+  const model =
+    String(process.env.GROQ_MODEL || "").trim() || "llama-3.3-70b-versatile";
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.7,
+      max_tokens: 2048,
+      messages
+    }),
+    signal: AbortSignal.timeout(25000)
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const reason =
+      data?.error?.message || data?.message || "Groq HTTP " + response.status;
+    return { sent: false, reason, model };
+  }
+  const reply = data?.choices?.[0]?.message?.content;
+  if (!reply || !String(reply).trim()) {
+    return { sent: false, reason: "Empty Groq reply", model };
+  }
+  return { sent: true, reply: String(reply).trim(), model };
+}
+
 async function callGemini(apiKey, model, contents) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     model
@@ -116,12 +164,13 @@ async function callGemini(apiKey, model, contents) {
 
 exports.chat = async (req, res) => {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    const geminiKey = String(process.env.GEMINI_API_KEY || "").trim();
+    const groqKey = String(process.env.GROQ_API_KEY || "").trim();
+    if (!geminiKey && !groqKey) {
       return res.status(503).json({
         success: false,
         message:
-          "Travel chatbot is not configured. Set GEMINI_API_KEY in Render Environment, then redeploy."
+          "Travel chatbot is not configured. Set GEMINI_API_KEY (and optionally GROQ_API_KEY) in Render Environment, then redeploy."
       });
     }
 
@@ -137,86 +186,111 @@ exports.chat = async (req, res) => {
       });
     }
 
-    const preferred = resolveGeminiModel(
-      process.env.GEMINI_MODEL || DEFAULT_MODEL
-    );
-
-    // Prefer 3.8; on overload/quota fall through to other free Flash models
-    const modelCandidates = [
-      preferred,
-      "gemini-3.8-flash",
-      "gemini-3.7-flash",
-      "gemini-3.5-flash",
-      "gemini-3.5-flash-lite",
-      "gemini-2.5-flash"
-    ].filter((m, i, arr) => m && arr.indexOf(m) === i);
-
+    const groqMessages = [{ role: "system", content: TRAVEL_SYSTEM }];
     const contents = [];
     if (Array.isArray(history)) {
       for (const turn of history.slice(-12)) {
         if (!turn || typeof turn.text !== "string") continue;
-        const role = turn.role === "model" ? "model" : "user";
         const t = turn.text.trim();
         if (!t) continue;
+        const role = turn.role === "model" ? "model" : "user";
         contents.push({ role, parts: [{ text: t }] });
+        groqMessages.push({
+          role: role === "model" ? "assistant" : "user",
+          content: t
+        });
       }
     }
     contents.push({ role: "user", parts: [{ text: userText }] });
+    groqMessages.push({ role: "user", content: userText });
 
     let lastErr = "Gemini request failed";
 
-    for (const model of modelCandidates) {
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        const { response, data } = await callGemini(apiKey, model, contents);
-        const errMsg =
-          data?.error?.message ||
-          data?.message ||
-          `Gemini request failed (${response.status})`;
+    if (geminiKey) {
+      const preferred = resolveGeminiModel(
+        process.env.GEMINI_MODEL || DEFAULT_MODEL
+      );
+      const modelCandidates = [
+        preferred,
+        "gemini-3.8-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.7-flash",
+        "gemini-3.5-flash",
+        "gemini-2.5-flash"
+      ].filter((m, i, arr) => m && arr.indexOf(m) === i);
 
-        if (!response.ok) {
-          lastErr = errMsg;
-          console.error("Gemini error:", model, attempt, lastErr);
+      let skipGemini = false;
+      for (const model of modelCandidates) {
+        if (skipGemini) break;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          const { response, data } = await callGemini(geminiKey, model, contents);
+          const errMsg =
+            data?.error?.message ||
+            data?.message ||
+            `Gemini request failed (${response.status})`;
 
-          if (isNotFound(response.status, lastErr)) break;
+          if (!response.ok) {
+            lastErr = errMsg;
+            console.error("Gemini error:", model, attempt, lastErr);
 
-          if (isOverload(response.status, lastErr)) {
-            if (attempt === 1) {
-              await sleep(800);
-              continue;
+            if (isAuthError(response.status, lastErr) && response.status !== 400) {
+              skipGemini = true;
+              break;
             }
+            if (isNotFound(response.status, lastErr)) break;
+            if (isOverload(response.status, lastErr)) {
+              if (attempt === 1) {
+                await sleep(800);
+                continue;
+              }
+              break;
+            }
+            skipGemini = true;
             break;
           }
 
-          return res.status(502).json({ success: false, message: lastErr });
+          const parts = data?.candidates?.[0]?.content?.parts;
+          const reply =
+            Array.isArray(parts) && parts.length
+              ? parts.map((p) => p.text || "").join("").trim()
+              : "";
+
+          if (!reply) {
+            const block = data?.candidates?.[0]?.finishReason;
+            lastErr =
+              block === "SAFETY"
+                ? "Reply blocked by safety filters. Try a different travel question."
+                : "No reply from the travel assistant. Try again.";
+            break;
+          }
+
+          return res.json({
+            success: true,
+            reply,
+            model
+          });
         }
+      }
+    }
 
-        const parts = data?.candidates?.[0]?.content?.parts;
-        const reply =
-          Array.isArray(parts) && parts.length
-            ? parts.map((p) => p.text || "").join("").trim()
-            : "";
-
-        if (!reply) {
-          const block = data?.candidates?.[0]?.finishReason;
-          lastErr =
-            block === "SAFETY"
-              ? "Reply blocked by safety filters. Try a different travel question."
-              : "No reply from the travel assistant. Try again.";
-          break;
-        }
-
+    if (groqKey) {
+      const groq = await callGroq(groqMessages);
+      if (groq.sent) {
+        console.log("[chat] Groq fallback OK", groq.model);
         return res.json({
           success: true,
-          reply,
-          model
+          reply: groq.reply,
+          model: groq.model
         });
       }
+      lastErr = groq.reason || lastErr;
+      console.error("[chat] Groq fallback failed:", lastErr);
     }
 
     return res.status(502).json({
       success: false,
-      message: /overload|unavailable|503/i.test(lastErr)
-        ? "Gemini is overloaded right now. Wait a few seconds and try again."
+      message: /overload|unavailable|503|quota|resource.?exhausted/i.test(lastErr)
+        ? "Gemini is overloaded or out of free quota. Wait a bit, or set GROQ_API_KEY as backup."
         : lastErr
     });
   } catch (error) {
