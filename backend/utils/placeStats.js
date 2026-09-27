@@ -146,10 +146,13 @@ function withLiveStats(place, visitMap) {
   const averageRating =
     realRatings.ratingsCount > 0 ? realRatings.averageRating : seedAvg;
 
-  const realVisitors =
-    visitMap && Object.prototype.hasOwnProperty.call(visitMap, id)
+  // Real visitor count: from map when provided (0 if place has no visits yet)
+  let realVisitors = null;
+  if (visitMap) {
+    realVisitors = Object.prototype.hasOwnProperty.call(visitMap, id)
       ? visitMap[id] || 0
-      : null;
+      : 0;
+  }
 
   let visitorsCount;
   if (realVisitors !== null) {
@@ -160,13 +163,18 @@ function withLiveStats(place, visitMap) {
     ) {
       base = place.baseVisitorsCount;
     } else if (typeof place.visitorsCount === "number") {
-      // Recover once for response (syncVisitorsCount persists it)
+      // Legacy recover: stored may already be base+real
       const stored = place.visitorsCount;
       base = stored >= realVisitors ? stored - realVisitors : stored;
     } else {
       base = 0;
     }
     visitorsCount = base + realVisitors;
+  } else if (
+    typeof place.baseVisitorsCount === "number" &&
+    place.baseVisitorsCount >= 0
+  ) {
+    visitorsCount = place.baseVisitorsCount;
   } else {
     visitorsCount =
       typeof place.visitorsCount === "number" ? place.visitorsCount : 0;

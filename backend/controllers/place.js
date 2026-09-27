@@ -222,7 +222,8 @@ exports.ratePlace = async (req, res) => {
     // Real average from ratings array; displayed counts include sample base
     const { averageRating: realAvg } = ratingStats(place.ratings);
     if (realAvg > 0) place.averageRating = realAvg;
-    await place.save();
+    // Sample/AI places may lack required addedBy — only validate changed paths
+    await place.save({ validateModifiedOnly: true });
 
     const visitMap = await visitorCountMap([place._id]);
     const lean = place.toObject ? place.toObject() : place;

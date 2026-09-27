@@ -48,11 +48,11 @@ const placeSchema = new mongoose.Schema({
     default: ""
   },
 
-  /** Admin (or user) who created this place */
+  /** Admin (or user) who created this place (optional for AI/sample seed data) */
   addedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true
+    required: false
   },
 
   ratings: [
