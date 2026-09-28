@@ -135,10 +135,16 @@ fun ProfileScreen(
         }
     }
 
-    val bg = if (themeMode == "dark") Color(0xFF0B1D2A) else Color(0xFFF0F6FC)
-    val cardBg = if (themeMode == "dark") Color(0xFF102A43) else Color.White
-    val textPrimary = if (themeMode == "dark") Color.White else Color(0xFF1A1A1A)
-    val textSecondary = if (themeMode == "dark") Color(0xFFB0BEC5) else Color(0xFF6B6B6B)
+    // Resolve light/dark for all modes including "system" so theme applies app-wide
+    val isDark = when (themeMode) {
+        "dark" -> true
+        "light" -> false
+        else -> androidx.compose.foundation.isSystemInDarkTheme()
+    }
+    val bg = if (isDark) Color(0xFF0B1D2A) else Color(0xFFF0F6FC)
+    val cardBg = if (isDark) Color(0xFF102A43) else Color.White
+    val textPrimary = if (isDark) Color.White else Color(0xFF1A1A1A)
+    val textSecondary = if (isDark) Color(0xFFB0BEC5) else Color(0xFF6B6B6B)
 
     Column(
         modifier = modifier

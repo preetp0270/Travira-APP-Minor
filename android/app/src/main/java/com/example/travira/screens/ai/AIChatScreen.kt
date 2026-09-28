@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -54,7 +55,6 @@ import com.example.travira.remote.RetrofitInstance
 import kotlinx.coroutines.launch
 
 private val BrandBlue = Color(0xFF1565C0)
-private val SoftBg = Color(0xFFF0F6FC)
 
 private data class UiMessage(
     val id: String,
@@ -155,13 +155,15 @@ fun AIChatScreen(
         }
     }
 
+    val colors = MaterialTheme.colorScheme
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(SoftBg)
+            .background(colors.background)
             .imePadding()
-            // Keep content above system nav + Travira bottom bar (~80–100dp)
-            .padding(bottom = 96.dp)
+            // Keep content above system nav + Travira bottom bar
+            .padding(bottom = 108.dp)
     ) {
         // Glass-style header
         Row(
@@ -268,8 +270,8 @@ fun AIChatScreen(
                     focusedBorderColor = BrandBlue,
                     unfocusedBorderColor = Color(0xFFCFD8DC),
                     cursorColor = BrandBlue,
-                    focusedContainerColor = SoftBg,
-                    unfocusedContainerColor = SoftBg
+                    focusedContainerColor = colors.surface,
+                    unfocusedContainerColor = colors.surface
                 )
             )
             Spacer(Modifier.size(8.dp))

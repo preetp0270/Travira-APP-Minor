@@ -1,5 +1,7 @@
 package com.example.travira.screens.home
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,11 +13,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -31,11 +36,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,20 +51,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.travira.components.AppCard
 import com.example.travira.model.Place
+import kotlin.math.roundToInt
 
 private val BrandBlue = Color(0xFF1565C0)
-private val SoftBg = Color(0xFFF0F6FC)
+
+/** Top floating pill is ~2× the bottom bar pill footprint. */
+private val TopPillHorizontalPadding = 24.dp
+/** Extra space above the floating top pill (below status bar). */
+private val TopPillTopGap = 22.dp
+private val TopPillShape = RoundedCornerShape(36.dp)
+/** Clearance under the pill so list content does not sit under it. */
+private val TopContentClearance = 118.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +95,42 @@ fun HomeScreen(
 ) {
     var query by remember { mutableStateOf("") }
     val pullState = rememberPullToRefreshState()
+    val listState = rememberLazyListState()
+    val density = LocalDensity.current
+
+    // Scroll-aware: hide on scroll down, show on scroll up (not permanently sticky)
+    var headerVisible by remember { mutableStateOf(true) }
+    var accumulated by remember { mutableFloatStateOf(0f) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val dy = available.y
+                // Ignore tiny jitter
+                if (dy < -2f) {
+                    // content scrolling up → finger down → hide header
+                    accumulated += dy
+                    if (accumulated < -24f) {
+                        headerVisible = false
+                        accumulated = 0f
+                    }
+                } else if (dy > 2f) {
+                    // content scrolling down → finger up → show header
+                    accumulated += dy
+                    if (accumulated > 16f) {
+                        headerVisible = true
+                        accumulated = 0f
+                    }
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    val headerOffsetPx by animateFloatAsState(
+        targetValue = if (headerVisible) 0f else with(density) { (-130).dp.toPx() },
+        animationSpec = tween(durationMillis = 280),
+        label = "headerOffset"
+    )
 
     val filtered = remember(places, query) {
         val q = query.trim()
@@ -99,12 +156,12 @@ fun HomeScreen(
         onPlaceClick(pool.random())
     }
 
-    val displayName = userName?.takeIf { it.isNotBlank() }?.substringBefore(" ") ?: "Traveler"
+    val colors = MaterialTheme.colorScheme
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SoftBg)
+            .background(colors.background)
     ) {
         when {
             isLoading && places.isEmpty() -> {
@@ -153,18 +210,21 @@ fun HomeScreen(
                     isRefreshing = isLoading,
                     onRefresh = onRefresh,
                     state = pullState,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(nestedScrollConnection)
                 ) {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // Space so first cards sit below the floating top pill
                         item {
-                            HomeHeader(
-                                displayName = displayName,
-                                query = query,
-                                onQueryChange = { query = it },
-                                onRandomClick = { openRandomPlace() }
+                            Spacer(
+                                modifier = Modifier
+                                    .statusBarsPadding()
+                                    .height(TopPillTopGap + TopContentClearance)
                             )
                         }
 
@@ -209,12 +269,12 @@ fun HomeScreen(
                                         fontSize = 22.sp,
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Serif,
-                                        color = Color(0xFF0D1B2A)
+                                        color = colors.onBackground
                                     )
                                     Text(
                                         text = "${filtered.size} place${if (filtered.size == 1) "" else "s"}",
                                         fontSize = 14.sp,
-                                        color = Color(0xFF78909C)
+                                        color = colors.onBackground.copy(alpha = 0.55f)
                                     )
                                 }
                             }
@@ -236,6 +296,18 @@ fun HomeScreen(
                         item { Spacer(modifier = Modifier.height(110.dp)) }
                     }
                 }
+
+                // Floating glassy top pill — hides on scroll down, shows on scroll up
+                HomeTopPill(
+                    query = query,
+                    onQueryChange = { query = it },
+                    onRandomClick = { openRandomPlace() },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(top = TopPillTopGap)
+                        .offset { IntOffset(0, headerOffsetPx.roundToInt()) }
+                )
             }
         }
 
@@ -257,91 +329,82 @@ fun HomeScreen(
     }
 }
 
+/**
+ * Glassy floating top pill (~2× bottom bar size).
+ * Row 1: Travira name (left) + logo (right)
+ * Row 2: search bar + random button
+ */
 @Composable
-private fun HomeHeader(
-    displayName: String,
+private fun HomeTopPill(
     query: String,
     onQueryChange: (String) -> Unit,
-    onRandomClick: () -> Unit
+    onRandomClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Upper body above search — gradient glass hero
-        Box(
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = TopPillHorizontalPadding),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF0B1D2A),
-                            Color(0xFF0D47A1),
-                            Color(0xFF1565C0),
-                            Color(0xFF42A5F5).copy(alpha = 0.85f)
-                        )
-                    )
-                )
-                .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 22.dp)
+                .shadow(
+                    elevation = 14.dp,
+                    shape = TopPillShape
+                ),
+            shape = TopPillShape,
+            color = Color(0xFF1565C0).copy(alpha = 0.22f),
+            tonalElevation = 0.dp
         ) {
-            // Soft orb
-            Box(
+            Column(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.12f))
-            )
-
-            Column {
+                    .fillMaxWidth()
+                    // Glass layer (matches bottom bar frosted style)
+                    .background(
+                        Color.White.copy(alpha = 0.58f),
+                        TopPillShape
+                    )
+                    .border(
+                        BorderStroke(1.dp, Color.White.copy(alpha = 0.65f)),
+                        TopPillShape
+                    )
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                // Part 1 — brand row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Hello, $displayName 👋",
-                            fontSize = 14.sp,
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontWeight = FontWeight.Medium
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "Let's explore",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Serif,
-                            color = Color.White,
-                            lineHeight = 32.sp
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "Discover places with Travira",
-                            fontSize = 13.sp,
-                            color = Color(0xFFBBDEFB),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
+                    Text(
+                        text = "Travira",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif,
+                        color = Color(0xFF0D1B2A)
+                    )
                     Box(
                         modifier = Modifier
-                            .size(52.dp)
-                            .shadow(10.dp, CircleShape)
+                            .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .border(1.5.dp, Color.White.copy(alpha = 0.55f), CircleShape),
+                            .background(BrandBlue.copy(alpha = 0.15f))
+                            .border(1.dp, BrandBlue.copy(alpha = 0.35f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.TravelExplore,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
+                            imageVector = Icons.Default.TravelExplore,
+                            contentDescription = "Travira",
+                            tint = BrandBlue,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
 
-                Spacer(Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Glass search row
+                // Part 2 — search + random
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -350,40 +413,40 @@ private fun HomeHeader(
                     Row(
                         modifier = Modifier
                             .weight(1f)
-                            .height(50.dp)
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(Color.White.copy(alpha = 0.22f))
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(Color.White.copy(alpha = 0.72f))
                             .border(
-                                BorderStroke(1.dp, Color.White.copy(alpha = 0.45f)),
-                                RoundedCornerShape(18.dp)
+                                BorderStroke(1.dp, BrandBlue.copy(alpha = 0.18f)),
+                                RoundedCornerShape(22.dp)
                             )
-                            .padding(horizontal = 14.dp),
+                            .padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             Icons.Default.Search,
                             contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            tint = BrandBlue,
+                            modifier = Modifier.size(20.dp)
                         )
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(8.dp))
                         BasicTextField(
                             value = query,
                             onValueChange = onQueryChange,
                             singleLine = true,
                             textStyle = TextStyle(
-                                fontSize = 15.sp,
-                                color = Color.White,
+                                fontSize = 14.sp,
+                                color = Color(0xFF0D1B2A),
                                 fontWeight = FontWeight.Medium
                             ),
-                            cursorBrush = SolidColor(Color.White),
+                            cursorBrush = SolidColor(BrandBlue),
                             modifier = Modifier.weight(1f),
                             decorationBox = { inner ->
                                 if (query.isEmpty()) {
                                     Text(
                                         "Search places, cities…",
-                                        color = Color.White.copy(alpha = 0.65f),
-                                        fontSize = 14.sp
+                                        color = Color(0xFF90A4AE),
+                                        fontSize = 13.sp
                                     )
                                 }
                                 inner()
@@ -394,16 +457,16 @@ private fun HomeHeader(
                     IconButton(
                         onClick = onRandomClick,
                         modifier = Modifier
-                            .size(50.dp)
-                            .shadow(8.dp, RoundedCornerShape(16.dp))
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White)
+                            .size(44.dp)
+                            .shadow(6.dp, RoundedCornerShape(22.dp))
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(BrandBlue)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Casino,
                             contentDescription = "Surprise me — random place",
-                            tint = BrandBlue,
-                            modifier = Modifier.size(24.dp)
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }

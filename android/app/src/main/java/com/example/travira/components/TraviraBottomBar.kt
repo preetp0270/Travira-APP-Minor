@@ -51,7 +51,8 @@ fun TraviraBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(start = 60.dp, end = 60.dp, bottom = 16.dp),
+            // Extra gap below the floating bottom pill
+            .padding(start = 60.dp, end = 60.dp, bottom = 28.dp),
         horizontalArrangement = Arrangement.Center
     ) {
         Surface(

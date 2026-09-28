@@ -45,6 +45,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -189,7 +190,7 @@ fun PlaceScreen(
         )
     }
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color(0xFFF7F8FA))) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         val heroHeight = maxHeight * 0.5f
         Column(
             modifier = Modifier
