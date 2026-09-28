@@ -72,6 +72,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation("androidx.compose.material:material-icons-extended")
+    // Brand fonts use res/font (bundled TTF). Avoid ui-text-google-fonts without a
+    // BOM-aligned version — it can break Compose with ComposableFunction1 errors.
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 

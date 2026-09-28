@@ -1,5 +1,7 @@
 package com.example.travira.screens.auth
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -46,11 +48,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -60,6 +64,9 @@ import com.example.travira.remote.LoginRequest
 import com.example.travira.remote.RegisterRequest
 import com.example.travira.remote.RetrofitInstance
 import kotlinx.coroutines.launch
+
+private const val ADMIN_REGISTER_URL =
+    "https://travira-app-minor.onrender.com/admin-register.html"
 
 @Composable
 fun LoginScreen(
@@ -403,6 +410,33 @@ fun LoginScreen(
                 textAlign = TextAlign.Center,
                 lineHeight = 17.sp
             )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Admin registration — opens in the system browser
+            val context = LocalContext.current
+            TextButton(
+                onClick = {
+                    try {
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse(ADMIN_REGISTER_URL)
+                        )
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Log.e("TRAVIRA_AUTH", "Could not open admin register URL", e)
+                    }
+                }
+            ) {
+                Text(
+                    text = "Admin? Register here",
+                    color = Color.White.copy(alpha = 0.95f),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    textDecoration = TextDecoration.Underline,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
 
         IconButton(

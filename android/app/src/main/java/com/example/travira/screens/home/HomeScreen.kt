@@ -1,18 +1,25 @@
 package com.example.travira.screens.home
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,8 +34,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,16 +44,20 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,29 +65,43 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.travira.components.AppCard
 import com.example.travira.model.Place
+import com.example.travira.ui.theme.TraviraBrandFont
 import kotlin.math.roundToInt
 
 private val BrandBlue = Color(0xFF1565C0)
 
 /** Top floating pill is ~2× the bottom bar pill footprint. */
 private val TopPillHorizontalPadding = 24.dp
-/** Extra space above the floating top pill (below status bar). */
-private val TopPillTopGap = 22.dp
+/**
+ * Extra space above the floating top pill (below the status bar).
+ * Change this value manually to tune the gap — e.g. 28.dp, 36.dp, 44.dp.
+ * File: screens/home/HomeScreen.kt → TopPillTopGap
+ */
+private val TopPillTopGap = 36.dp
 private val TopPillShape = RoundedCornerShape(36.dp)
-/** Clearance under the pill so list content does not sit under it. */
+/**
+ * Clearance under the pill so list content does not sit under it.
+ * If you increase [TopPillTopGap] a lot, bump this slightly too.
+ */
 private val TopContentClearance = 118.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,10 +122,17 @@ fun HomeScreen(
     val pullState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
     val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
 
     // Scroll-aware: hide on scroll down, show on scroll up (not permanently sticky)
     var headerVisible by remember { mutableStateOf(true) }
     var accumulated by remember { mutableFloatStateOf(0f) }
+
+    val showScrollToTop by remember {
+        derivedStateOf {
+            headerVisible && (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 150)
+        }
+    }
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -311,6 +343,34 @@ fun HomeScreen(
             }
         }
 
+        AnimatedVisibility(
+            visible = showScrollToTop,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut(),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(
+                    end = 20.dp,
+                    bottom = if (isAdmin) 164.dp else 96.dp
+                )
+        ) {
+            SmallFloatingActionButton(
+                onClick = {
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(0)
+                    }
+                },
+                containerColor = BrandBlue,
+                contentColor = Color.White,
+                shape = CircleShape
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = "Scroll to top"
+                )
+            }
+        }
+
         if (isAdmin) {
             FloatingActionButton(
                 onClick = onAddClick,
@@ -370,39 +430,10 @@ private fun HomeTopPill(
                         BorderStroke(1.dp, Color.White.copy(alpha = 0.65f)),
                         TopPillShape
                     )
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
             ) {
-                // Part 1 — brand row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Travira",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Serif,
-                        color = Color(0xFF0D1B2A)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(BrandBlue.copy(alpha = 0.15f))
-                            .border(1.dp, BrandBlue.copy(alpha = 0.35f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.TravelExplore,
-                            contentDescription = "Travira",
-                            tint = BrandBlue,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
+                // Part 1 — "Travira" title
+                BrandTitleFullWidth()
 
                 // Part 2 — search + random
                 Row(
@@ -471,6 +502,78 @@ private fun HomeTopPill(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BrandTitleFullWidth(
+    modifier: Modifier = Modifier,
+    text: String = "Travira",
+    color: Color = BrandBlue
+) {
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(44.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        val textMeasurer = rememberTextMeasurer()
+        val targetWidthPx = constraints.maxWidth.toFloat()
+
+        val baseStyle = TextStyle(
+            fontFamily = TraviraBrandFont,
+            fontWeight = FontWeight.Bold,
+            color = color,
+            platformStyle = PlatformTextStyle(includeFontPadding = false)
+        )
+
+        val baseFontSize = 100.sp
+        val measuredResult = textMeasurer.measure(
+            text = text,
+            style = baseStyle.copy(fontSize = baseFontSize)
+        )
+        val measuredWidthPx = measuredResult.size.width.toFloat()
+
+        val fontSize = if (measuredWidthPx > 0f && targetWidthPx > 0f) {
+            val scale = (targetWidthPx * 0.94f) / measuredWidthPx
+            minOf(100 * scale, 38f).sp
+        } else {
+            36.sp
+        }
+
+        Text(
+            text = text,
+            style = baseStyle.copy(
+                fontSize = fontSize,
+                lineHeight = fontSize,
+                lineHeightStyle = LineHeightStyle(
+                    alignment = LineHeightStyle.Alignment.Bottom,
+                    trim = LineHeightStyle.Trim.Both
+                ),
+                textAlign = TextAlign.Center
+            ),
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.padding(bottom = 0.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeTopPillPreview() {
+    MaterialTheme {
+        Box(
+            modifier = Modifier
+                .background(Color(0xFFE0E0E0))
+                .padding(16.dp)
+        ) {
+            HomeTopPill(
+                query = "",
+                onQueryChange = {},
+                onRandomClick = {}
+            )
         }
     }
 }

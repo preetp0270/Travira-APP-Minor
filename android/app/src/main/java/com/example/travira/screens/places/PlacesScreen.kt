@@ -190,7 +190,9 @@ fun PlaceScreen(
         )
     }
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    val colors = MaterialTheme.colorScheme
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(colors.background)) {
         val heroHeight = maxHeight * 0.5f
         Column(
             modifier = Modifier
@@ -320,12 +322,12 @@ fun PlaceScreen(
                 }
             }
 
-            // ── Content sheet ──────────────────────────────────────
+            // ── Content sheet (follows light/dark theme) ───────────
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        Color(0xFFF7F8FA),
+                        colors.background,
                         RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp)
                     )
                     .padding(top = 16.dp, bottom = 28.dp)
@@ -430,7 +432,7 @@ fun PlaceScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -438,13 +440,13 @@ fun PlaceScreen(
                             "Rate this place",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF1A1A1A)
+                            color = colors.onSurface
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             "Your rating helps other travelers. You can update it anytime.",
                             fontSize = 13.sp,
-                            color = Color(0xFF78909C)
+                            color = colors.onSurface.copy(alpha = 0.55f)
                         )
                         Spacer(Modifier.height(12.dp))
                         Row(
@@ -538,7 +540,7 @@ fun PlaceScreen(
                     text = "About",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1A1A1A),
+                    color = colors.onBackground,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
                 Spacer(Modifier.height(8.dp))
@@ -548,7 +550,7 @@ fun PlaceScreen(
                         ?: "No description yet.",
                     fontSize = 15.sp,
                     lineHeight = 24.sp,
-                    color = Color(0xFF4A5568),
+                    color = colors.onBackground.copy(alpha = 0.72f),
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
 
@@ -559,7 +561,7 @@ fun PlaceScreen(
                     text = "Location",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF0D1B2A),
+                    color = colors.onBackground,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
                 Spacer(Modifier.height(10.dp))
@@ -570,7 +572,7 @@ fun PlaceScreen(
                         .clickable { openMaps() },
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.White.copy(alpha = 0.92f)
+                        containerColor = colors.surface.copy(alpha = 0.96f)
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     border = androidx.compose.foundation.BorderStroke(
@@ -580,14 +582,7 @@ fun PlaceScreen(
                 ) {
                     Row(
                         modifier = Modifier
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(
-                                        Color(0xFFE3F2FD).copy(alpha = 0.85f),
-                                        Color.White.copy(alpha = 0.95f)
-                                    )
-                                )
-                            )
+                            .background(colors.surface)
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -616,7 +611,7 @@ fun PlaceScreen(
                                     ?: place.locationLine.ifBlank { place.name },
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF0D1B2A),
+                                color = colors.onSurface,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -701,9 +696,10 @@ private fun InfoPill(
     label: String,
     value: String
 ) {
+    val colors = MaterialTheme.colorScheme
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
@@ -715,13 +711,13 @@ private fun InfoPill(
                     icon()
                     Spacer(Modifier.width(6.dp))
                 }
-                Text(label, fontSize = 12.sp, color = Color(0xFF78909C))
+                Text(label, fontSize = 12.sp, color = colors.onSurface.copy(alpha = 0.55f))
             }
             Text(
                 text = value,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF212121),
+                color = colors.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -738,8 +734,9 @@ private fun ActionChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bg = if (selected) selectedColor.copy(alpha = 0.12f) else Color.White
-    val fg = if (selected) selectedColor else Color(0xFF455A64)
+    val scheme = MaterialTheme.colorScheme
+    val bg = if (selected) selectedColor.copy(alpha = 0.12f) else scheme.surface
+    val fg = if (selected) selectedColor else scheme.onSurface.copy(alpha = 0.75f)
     Card(
         modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
