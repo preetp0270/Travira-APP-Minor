@@ -1,6 +1,7 @@
 # Android Studio
 .idea/
 .kotlin/
+node_modules/
 
 # Gradle
 .gradle/
@@ -22,6 +23,7 @@ backend/.env
 # Generated files
 *.apk
 *.aab
+.env
 
 .gradle/
 **/gradle-daemon-jvm.properties
