@@ -3,6 +3,7 @@
 Travira is an AI-powered **Android travel app** with a **Node.js + MongoDB backend**. Users discover destinations, mark places as visited, leave reviews, manage a wishlist, and chat with a Gemini-powered travel assistant. Admins manage places and users via the app and browser tools.
 
 **Live backend:** [https://travira-app-minor.onrender.com](https://travira-app-minor.onrender.com)
+**Download Semi-Final Touch:** [https://github.com/preetp0270/Travira-APP-Minor/actions/runs/36417253172/artifacts/10967718115}](https://github.com/preetp0270/Travira-APP-Minor/actions/runs/36417253172/artifacts/10967718115)
 
 ---
 
