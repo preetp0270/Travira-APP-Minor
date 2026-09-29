@@ -266,7 +266,7 @@ Travira aims to be a practical travel companion: discover places, learn from com
 
 ## 👨‍💻 Developers
 
-**Preet Patel** (Founder, idea, most contributions) · **Yagnik Padaliya** (Co-founder, problem-solving, help & suggestions)
+[**Preet Patel**](https://github.com/preetp0270) (Founder, idea, most contributions) · **Yagnik Padaliya** (Co-founder, problem-solving, help & suggestions)
 
 ### Vision
 
