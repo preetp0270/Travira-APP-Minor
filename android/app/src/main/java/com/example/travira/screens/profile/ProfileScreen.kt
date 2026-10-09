@@ -2,8 +2,8 @@ package com.example.travira.screens.profile
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,9 +13,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,50 +24,76 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.RateReview
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TravelExplore
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.travira.R
 import com.example.travira.auth.TokenManager
 import com.example.travira.model.User
 import com.example.travira.remote.RetrofitInstance
-import com.example.travira.remote.UpdateProfileRequest
-import kotlinx.coroutines.launch
+import com.example.travira.ui.theme.TraviraBlue
+import com.example.travira.ui.theme.TraviraBlueDark
+import com.example.travira.ui.theme.TraviraBlueLight
+import com.example.travira.ui.theme.TraviraBg
+import com.example.travira.ui.theme.TraviraError
+import com.example.travira.ui.theme.TraviraHeart
+import com.example.travira.ui.theme.TraviraHeartBg
+import com.example.travira.ui.theme.TraviraIce
+import com.example.travira.ui.theme.TraviraMutedIcon
+import com.example.travira.ui.theme.TraviraOutline
+import com.example.travira.ui.theme.TraviraSecondaryBright
+import com.example.travira.ui.theme.TraviraSky
+import com.example.travira.ui.theme.TraviraStar
+import com.example.travira.ui.theme.TraviraStarBg
+import com.example.travira.ui.theme.TraviraSuccess
+import com.example.travira.ui.theme.TraviraSuccessBg
+import com.example.travira.ui.theme.TraviraSurfaceLow
+import com.example.travira.ui.theme.TraviraTextPrimary
+import com.example.travira.ui.theme.TraviraTextSecondary
+import com.example.travira.ui.theme.TraviraTextTertiary
+import com.example.travira.ui.theme.TraviraWhite
+import com.example.travira.ui.theme.TraviraBrandFont
 
 enum class ProfileSection {
-    WISHLIST, VISITED, NOTIFICATIONS
+    WISHLIST, VISITED, REVIEWS
 }
 
 @Composable
@@ -79,9 +106,11 @@ fun ProfileScreen(
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onSectionClick: (ProfileSection) -> Unit = {},
+    onAdminClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val displayName = if (isLoggedIn) (user?.name?.ifBlank { "Traveler" } ?: "Traveler") else "Guest"
+    val email = if (isLoggedIn) (user?.email.orEmpty()) else ""
     val bioFromUser = user?.bio
     val bio = when {
         !isLoggedIn -> "Browsing as guest. Login to save wishlist & use AI."
@@ -90,16 +119,54 @@ fun ProfileScreen(
     }
     val wishlistCount = user?.wishlist?.size ?: 0
     val visitedCount = user?.visitedPlaces?.size ?: 0
-    val unreadNotifs = user?.notifications?.count { !it.read } ?: 0
+    // Count unique countries from visited places (simple number only — no extra list)
+    val countriesCount = user?.visitedPlaces
+        ?.mapNotNull { entry ->
+            entry.place?.country?.trim()?.takeIf { it.isNotBlank() }
+                ?: entry.place?.location?.substringAfterLast(",")?.trim()?.takeIf { it.isNotBlank() }
+        }
+        ?.distinct()
+        ?.size
+        ?: 0
+    val userLocation = user?.location?.trim().orEmpty()
+    val isAdmin = (user?.role?.equals("admin", ignoreCase = true) == true) ||
+            (tokenManager?.isAdmin == true)
+
+    val level = when {
+        visitedCount >= 20 -> 5
+        visitedCount >= 12 -> 4
+        visitedCount >= 6 -> 3
+        visitedCount >= 3 -> 2
+        visitedCount >= 1 -> 1
+        else -> 0
+    }
+    val nextMilestone = when {
+        visitedCount < 5 -> 5
+        visitedCount < 10 -> 10
+        visitedCount < 20 -> 20
+        else -> visitedCount + 5
+    }
+    val progress = (visitedCount.toFloat() / nextMilestone.toFloat()).coerceIn(0f, 1f)
 
     val scroll = rememberScrollState()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
-    var notifEnabled by remember(tokenManager?.notificationsEnabled) {
-        mutableStateOf(tokenManager?.notificationsEnabled ?: true)
+    var toastMsg by remember { mutableStateOf<String?>(null) }
+    var reviewsCount by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(isLoggedIn, user?.userId) {
+        if (!isLoggedIn) {
+            reviewsCount = 0
+            return@LaunchedEffect
+        }
+        val token = tokenManager?.accessToken ?: return@LaunchedEffect
+        try {
+            val res = RetrofitInstance.authApi.getMyRatings("Bearer $token")
+            reviewsCount = res.count
+        } catch (_: Exception) {
+            reviewsCount = 0
+        }
     }
-    var settingsExpanded by remember { mutableStateOf(false) }
 
     fun requireLoginThen(section: ProfileSection) {
         if (!isLoggedIn) onLoginClick() else onSectionClick(section)
@@ -113,217 +180,416 @@ fun ProfileScreen(
         }
         onThemeModeChange(next)
         tokenManager?.themeMode = next
+        toastMsg = "Appearance: ${next.replaceFirstChar { it.uppercase() }}"
     }
 
-    fun setNotifications(enabled: Boolean) {
-        notifEnabled = enabled
-        tokenManager?.notificationsEnabled = enabled
-        if (!isLoggedIn) return
-        val token = tokenManager?.accessToken ?: return
-        scope.launch {
-            try {
-                RetrofitInstance.authApi.updateProfile(
-                    bearer = "Bearer $token",
-                    body = UpdateProfileRequest(
-                        emailNotifications = enabled,
-                        inAppNotifications = enabled
-                    )
-                )
-            } catch (_: Exception) {
-                // Local preference still applied
-            }
-        }
-    }
-
-    // Resolve light/dark for all modes including "system" so theme applies app-wide
     val isDark = when (themeMode) {
         "dark" -> true
         "light" -> false
         else -> androidx.compose.foundation.isSystemInDarkTheme()
     }
-    val bg = if (isDark) Color(0xFF0B1D2A) else Color(0xFFF0F6FC)
-    val cardBg = if (isDark) Color(0xFF102A43) else Color.White
-    val textPrimary = if (isDark) Color.White else Color(0xFF1A1A1A)
-    val textSecondary = if (isDark) Color(0xFFB0BEC5) else Color(0xFF6B6B6B)
+    val bg = if (isDark) TraviraBlueDark else TraviraBg
+    val cardBg = if (isDark) Color(0xFF102A43) else TraviraWhite
+    val textPrimary = if (isDark) Color.White else TraviraTextPrimary
+    val textSecondary = if (isDark) Color(0xFFB0BEC5) else TraviraTextSecondary
+    val textTertiary = if (isDark) Color(0xFF78909C) else TraviraTextTertiary
+    val surfaceLow = if (isDark) Color(0xFF1A3348) else TraviraSurfaceLow
+    val outline = if (isDark) Color(0xFF2A4558) else TraviraOutline
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(bg)
-            .verticalScroll(scroll)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp)
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.taj),
-                contentDescription = "Cover",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))
-                        )
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .offset(y = (-8).dp)
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "Profile photo",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(96.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .padding(3.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFE3F2FD))
-                )
-            }
-        }
-
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = (-4).dp)
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(scroll)
+                .padding(bottom = 120.dp)
+                .navigationBarsPadding()
         ) {
-            Text(
-                text = displayName,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = textPrimary
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = bio,
-                fontSize = 13.sp,
-                color = textSecondary,
-                textAlign = TextAlign.Center,
-                lineHeight = 18.sp
-            )
-            if (!isLoggedIn) {
-                Spacer(modifier = Modifier.height(14.dp))
-                Button(
-                    onClick = onLoginClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Login / Sign up")
+            // Top bar — brand font matches home; Admin label when admin
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Travira",
+                        fontFamily = TraviraBrandFont,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 26.sp,
+                        color = TraviraBlue
+                    )
+                    Text(
+                        text = if (isAdmin) "Admin" else "User Profile",
+                        fontSize = 12.sp,
+                        color = textTertiary,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(8.dp))
 
-        ProfileMenuCard(cardBg) {
-            ProfileMenuItem(
-                icon = Icons.Default.Favorite,
-                title = "Wishlist",
-                trailing = if (wishlistCount > 0) wishlistCount.toString() else null,
-                onClick = { requireLoginThen(ProfileSection.WISHLIST) },
-                textPrimary = textPrimary
-            )
-            MenuDivider()
-            ProfileMenuItem(
-                icon = Icons.Default.TravelExplore,
-                title = "Visited Places",
-                trailing = if (visitedCount > 0) visitedCount.toString() else null,
-                onClick = { requireLoginThen(ProfileSection.VISITED) },
-                textPrimary = textPrimary
-            )
-            MenuDivider()
-            ProfileMenuItem(
-                icon = Icons.Default.Notifications,
-                title = "Notifications",
-                trailing = if (unreadNotifs > 0) unreadNotifs.toString() else null,
-                onClick = { requireLoginThen(ProfileSection.NOTIFICATIONS) },
-                textPrimary = textPrimary
-            )
-            if (isLoggedIn) {
-                MenuDivider()
-                ProfileMenuItem(
-                    icon = Icons.Default.Logout,
-                    title = "Logout",
-                    onClick = onLogoutClick,
-                    textPrimary = textPrimary
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Settings (in-app: notifications + theme — not email)
-        ProfileMenuCard(cardBg) {
-            ProfileMenuItem(
-                icon = Icons.Default.Settings,
-                title = "Settings",
-                subtitle = if (settingsExpanded) "Tap to collapse" else "Theme & notification prefs",
-                onClick = { settingsExpanded = !settingsExpanded },
-                textPrimary = textPrimary
-            )
-            if (settingsExpanded) {
-                MenuDivider()
-                // Notifications toggle
-                Row(
+            // Hero profile card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = RoundedCornerShape(24.dp),
+                        ambientColor = Color(0x331565C0),
+                        spotColor = Color(0x221565C0)
+                    )
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(cardBg)
+            ) {
+                // Ambient sky gradient accent
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .height(100.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFF1565C0).copy(alpha = 0.12f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFEEF5FF)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Notifications,
-                            contentDescription = null,
-                            tint = Color(0xFF1565C0),
-                            modifier = Modifier.size(22.dp)
-                        )
+                    // Avatar with ring
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        Box(
+                            modifier = Modifier
+                                .size(88.dp)
+                                .border(
+                                    width = 3.dp,
+                                    brush = Brush.linearGradient(
+                                        listOf(TraviraBlue, TraviraSky, TraviraBlueLight)
+                                    ),
+                                    shape = CircleShape
+                                )
+                                .padding(4.dp)
+                                .clip(CircleShape)
+                                .background(TraviraIce),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = TraviraBlue,
+                                modifier = Modifier.size(44.dp)
+                            )
+                        }
+                        if (isLoggedIn) {
+                            Box(
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .clip(CircleShape)
+                                    .background(TraviraBlue)
+                                    .border(2.dp, cardBg, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Verified,
+                                    contentDescription = "Verified",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
                     }
-                    Spacer(Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Text(
+                        text = displayName,
+                        fontFamily = FontFamily.Serif,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp,
+                        color = textPrimary
+                    )
+
+                    if (email.isNotBlank()) {
+                        Spacer(Modifier.height(4.dp))
                         Text(
-                            "Notifications",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = textPrimary
-                        )
-                        Text(
-                            "Login alerts & in-app updates",
-                            fontSize = 12.sp,
+                            text = email,
+                            fontSize = 13.sp,
                             color = textSecondary
                         )
                     }
-                    Switch(
-                        checked = notifEnabled,
-                        onCheckedChange = { setNotifications(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = Color(0xFF1565C0),
-                            checkedThumbColor = Color.White
+
+                    if (userLocation.isNotBlank()) {
+                        Spacer(Modifier.height(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Place,
+                                contentDescription = null,
+                                tint = textTertiary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = userLocation,
+                                fontSize = 12.sp,
+                                color = textSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(6.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Explore,
+                            contentDescription = null,
+                            tint = TraviraBlue,
+                            modifier = Modifier.size(16.dp)
                         )
+                        Text(
+                            text = if (isLoggedIn) {
+                                "Travel Explorer • Level $level"
+                            } else {
+                                "Guest explorer"
+                            },
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TraviraSecondaryBright
+                        )
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(
+                        text = bio,
+                        fontSize = 13.sp,
+                        color = textSecondary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    if (!isLoggedIn) {
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            onClick = onLoginClick,
+                            colors = ButtonDefaults.buttonColors(containerColor = TraviraBlue),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                        ) {
+                            Text(
+                                "Login / Sign up",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Stats bento grid
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                StatPill(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.CheckCircle,
+                    iconTint = TraviraSuccess,
+                    iconBg = if (isDark) Color(0xFF1B3A2A) else TraviraSuccessBg,
+                    label = "Visited",
+                    value = visitedCount.toString(),
+                    cardBg = cardBg,
+                    textPrimary = textPrimary,
+                    textTertiary = textTertiary,
+                    onClick = { requireLoginThen(ProfileSection.VISITED) }
+                )
+                StatPill(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Favorite,
+                    iconTint = TraviraHeart,
+                    iconBg = if (isDark) Color(0xFF3A1A28) else TraviraHeartBg,
+                    label = "Wishlist",
+                    value = wishlistCount.toString(),
+                    cardBg = cardBg,
+                    textPrimary = textPrimary,
+                    textTertiary = textTertiary,
+                    onClick = { requireLoginThen(ProfileSection.WISHLIST) }
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                StatPill(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Star,
+                    iconTint = TraviraStar,
+                    iconBg = if (isDark) Color(0xFF3A3010) else TraviraStarBg,
+                    label = "Reviews",
+                    value = reviewsCount.toString(),
+                    cardBg = cardBg,
+                    textPrimary = textPrimary,
+                    textTertiary = textTertiary,
+                    onClick = { requireLoginThen(ProfileSection.REVIEWS) }
+                )
+                StatPill(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Public,
+                    iconTint = TraviraBlue,
+                    iconBg = surfaceLow,
+                    label = "Countries",
+                    value = countriesCount.toString(),
+                    cardBg = cardBg,
+                    textPrimary = textPrimary,
+                    textTertiary = textTertiary,
+                    onClick = { requireLoginThen(ProfileSection.VISITED) }
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Passport milestones teaser
+            if (isLoggedIn) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(cardBg)
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Passport Milestones",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp,
+                            color = textPrimary
+                        )
+                        Text(
+                            text = "Next: $nextMilestone places",
+                            fontSize = 12.sp,
+                            color = textTertiary
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    // Progress bar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(surfaceLow)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress)
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(TraviraBlue, TraviraBlueLight)
+                                    )
+                                )
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "$visitedCount / $nextMilestone destinations logged",
+                        fontSize = 12.sp,
+                        color = textSecondary
                     )
                 }
-                MenuDivider()
-                // Theme cycle
+                Spacer(Modifier.height(12.dp))
+            }
+
+            // Travel Activity section
+            SectionHeader(
+                title = "Travel Activity",
+                caption = "Journal",
+                textPrimary = textPrimary,
+                textTertiary = textTertiary
+            )
+            ProfileSectionCard(cardBg = cardBg, outline = outline) {
+                ProfileRow(
+                    icon = Icons.Default.Favorite,
+                    iconTint = TraviraHeart,
+                    iconBg = if (isDark) Color(0xFF3A1A28) else TraviraHeartBg,
+                    title = "My Wishlist",
+                    subtitle = if (wishlistCount > 0) "$wishlistCount saved places" else "Save places for later",
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    onClick = { requireLoginThen(ProfileSection.WISHLIST) }
+                )
+                ThinDivider(outline)
+                ProfileRow(
+                    icon = Icons.Default.Place,
+                    iconTint = TraviraSuccess,
+                    iconBg = if (isDark) Color(0xFF1B3A2A) else TraviraSuccessBg,
+                    title = "Visited Destinations",
+                    subtitle = if (visitedCount > 0) "$visitedCount places explored" else "Mark places as visited",
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    onClick = { requireLoginThen(ProfileSection.VISITED) }
+                )
+                ThinDivider(outline)
+                ProfileRow(
+                    icon = Icons.Default.RateReview,
+                    iconTint = TraviraStar,
+                    iconBg = if (isDark) Color(0xFF3A3010) else TraviraStarBg,
+                    title = "My Reviews",
+                    subtitle = if (reviewsCount > 0) "$reviewsCount review${if (reviewsCount == 1) "" else "s"}" else "Rate places to add reviews",
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    onClick = { requireLoginThen(ProfileSection.REVIEWS) }
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Preferences — Appearance only
+            SectionHeader(
+                title = "Preferences",
+                caption = "Customization",
+                textPrimary = textPrimary,
+                textTertiary = textTertiary
+            )
+            ProfileSectionCard(cardBg = cardBg, outline = outline) {
                 val themeLabel = when (themeMode) {
                     "light" -> "Light"
                     "dark" -> "Dark"
@@ -333,147 +599,382 @@ fun ProfileScreen(
                     "dark" -> Icons.Default.DarkMode
                     else -> Icons.Default.LightMode
                 }
-                ProfileMenuItem(
+                ProfileRow(
                     icon = themeIcon,
+                    iconTint = TraviraBlue,
+                    iconBg = surfaceLow,
                     title = "Appearance",
                     subtitle = "$themeLabel · tap to change",
-                    onClick = { cycleTheme() },
-                    textPrimary = textPrimary
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    onClick = { cycleTheme() }
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
-        ProfileMenuCard(cardBg) {
+            // Account
+            SectionHeader(
+                title = "Account",
+                caption = "System",
+                textPrimary = textPrimary,
+                textTertiary = textTertiary
+            )
+            ProfileSectionCard(cardBg = cardBg, outline = outline) {
+                ProfileRow(
+                    icon = Icons.Default.HelpOutline,
+                    iconTint = TraviraMutedIcon,
+                    iconBg = surfaceLow,
+                    title = "Help & Support",
+                    subtitle = "FAQs and contact",
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    onClick = {
+                        openUrl(context, "mailto:support@travira.app")
+                    }
+                )
+                if (isLoggedIn) {
+                    ThinDivider(outline)
+                    ProfileRow(
+                        icon = Icons.AutoMirrored.Filled.Logout,
+                        iconTint = TraviraError,
+                        iconBg = if (isDark) Color(0xFF3A1A1A) else Color(0xFFFFEBEE),
+                        title = "Log Out",
+                        subtitle = "$displayName · Travira Account",
+                        textPrimary = TraviraError,
+                        textSecondary = textSecondary,
+                        showChevron = true,
+                        onClick = onLogoutClick
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Contact details
+            SectionHeader(
+                title = "Contact",
+                caption = "Reach us",
+                textPrimary = textPrimary,
+                textTertiary = textTertiary
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(cardBg)
+                    .padding(horizontal = 12.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ContactIconButton(
+                    label = "Email",
+                    icon = Icons.Default.Email,
+                    tint = TraviraBlue,
+                    bg = surfaceLow
+                ) { openUrl(context, "mailto:support@travira.app") }
+                ContactIconButton(
+                    label = "Call",
+                    icon = Icons.Default.Call,
+                    tint = TraviraSuccess,
+                    bg = if (isDark) Color(0xFF1B3A2A) else TraviraSuccessBg
+                ) { openUrl(context, "tel:+911234567890") }
+                ContactIconButton(
+                    label = "WhatsApp",
+                    icon = Icons.Default.Favorite,
+                    tint = Color(0xFF25D366),
+                    bg = if (isDark) Color(0xFF1B3A2A) else Color(0xFFE8F5E9)
+                ) { openUrl(context, "https://wa.me/911234567890") }
+                ContactIconButton(
+                    label = "Insta",
+                    icon = Icons.Default.TravelExplore,
+                    tint = Color(0xFFE1306C),
+                    bg = if (isDark) Color(0xFF3A1A28) else TraviraHeartBg
+                ) { openUrl(context, "https://instagram.com/travira") }
+                ContactIconButton(
+                    label = "GitHub",
+                    icon = Icons.Default.Code,
+                    tint = textPrimary,
+                    bg = surfaceLow
+                ) { openUrl(context, "https://github.com/travira") }
+                ContactIconButton(
+                    label = "Pinterest",
+                    icon = Icons.Default.Star,
+                    tint = Color(0xFFE60023),
+                    bg = if (isDark) Color(0xFF3A1A1A) else Color(0xFFFFEBEE)
+                ) { openUrl(context, "https://pinterest.com/travira") }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Footer
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "Travira",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1565C0)
+                Icon(
+                    Icons.Default.TravelExplore,
+                    contentDescription = null,
+                    tint = TraviraBlue.copy(alpha = 0.5f),
+                    modifier = Modifier.size(24.dp)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "© 2026 Travira. All rights reserved.",
+                    text = "Travira v3.4.2 • Crafted for Wanderlust",
                     fontSize = 12.sp,
-                    color = Color(0xFF9E9E9E)
+                    color = textTertiary,
+                    textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Explore smarter. Discover deeper.",
-                    fontSize = 12.sp,
-                    color = Color(0xFF757575)
-                )
-                Spacer(modifier = Modifier.height(18.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SocialIcon("IG", Color(0xFFE1306C)) { openUrl(context, "https://instagram.com/preetp_0270") }
-                    SocialIcon("Pin", Color(0xFFE60023)) { openUrl(context, "https://pinterest.com/preetp_0270") }
-                    SocialIcon("WA", Color(0xFF25D366)) { openUrl(context, "https://wa.me/7383215032") }
-                    SocialIcon("Git", Color(0xFF333333)) { openUrl(context, "https://github.com/travira") }
-                    SocialIcon("Call", Color(0xFF1565C0)) { openUrl(context, "tel:7383215032") }
-                }
             }
+
+            Spacer(Modifier.height(20.dp))
         }
 
-        Spacer(modifier = Modifier.height(100.dp))
+        // Toast
+        toastMsg?.let { msg ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 100.dp)
+                    .padding(horizontal = 24.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(TraviraBlue)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clickable { toastMsg = null }
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(msg, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                }
+            }
+            // auto-dismiss after short delay is better with LaunchedEffect — keep simple tap-to-dismiss
+        }
     }
 }
 
 @Composable
-private fun ProfileMenuCard(container: Color, content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = container),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(vertical = 4.dp)) { content() }
-    }
-}
-
-@Composable
-private fun ProfileMenuItem(
+private fun ContactIconButton(
+    label: String,
     icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    trailing: String? = null,
-    onClick: () -> Unit,
-    textPrimary: Color = Color(0xFF212121)
+    tint: Color,
+    bg: Color,
+    onClick: () -> Unit
 ) {
-    Row(
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 2.dp)
     ) {
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFEEF5FF)),
+                .clip(RoundedCornerShape(12.dp))
+                .background(bg),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, title, tint = Color(0xFF1565C0), modifier = Modifier.size(22.dp))
+            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
         }
-        Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = textPrimary)
-            if (subtitle != null) {
-                Text(subtitle, fontSize = 12.sp, color = Color(0xFF9E9E9E))
-            }
-        }
-        if (trailing != null) {
-            Box(
-                modifier = Modifier
-                    .background(Color(0xFF1565C0), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-            ) {
-                Text(trailing, fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-        }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            null,
-            tint = Color(0xFFBDBDBD),
-            modifier = Modifier.size(22.dp)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = label,
+            fontSize = 9.sp,
+            color = TraviraTextTertiary,
+            maxLines = 1
         )
     }
 }
 
 @Composable
-private fun MenuDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        thickness = 0.6.dp,
-        color = Color(0xFFEEEEEE)
-    )
+private fun StatPill(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    label: String,
+    value: String,
+    cardBg: Color,
+    textPrimary: Color,
+    textTertiary: Color,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(cardBg)
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(iconBg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = value,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            color = textPrimary
+        )
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = textTertiary,
+            fontWeight = FontWeight.Medium
+        )
+    }
 }
 
 @Composable
-private fun SocialIcon(label: String, color: Color, onClick: () -> Unit) {
+private fun SectionHeader(
+    title: String,
+    caption: String,
+    textPrimary: Color,
+    textTertiary: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Text(
+            text = title,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 16.sp,
+            color = textPrimary
+        )
+        Text(
+            text = caption.uppercase(),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.8.sp,
+            color = textTertiary
+        )
+    }
+}
+
+@Composable
+private fun ProfileSectionCard(
+    cardBg: Color,
+    outline: Color,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(cardBg)
+            .border(1.dp, outline.copy(alpha = 0.45f), RoundedCornerShape(20.dp))
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun ProfileRow(
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    title: String,
+    subtitle: String,
+    textPrimary: Color,
+    textSecondary: Color,
+    trailingBadge: String? = null,
+    showChevron: Boolean = true,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconBubble(icon = icon, tint = iconTint, bg = iconBg)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = textPrimary
+            )
+            Text(
+                text = subtitle,
+                fontSize = 12.sp,
+                color = textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (trailingBadge != null) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(TraviraBlue.copy(alpha = 0.12f))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = trailingBadge,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TraviraBlue,
+                    letterSpacing = 0.5.sp
+                )
+            }
+            Spacer(Modifier.width(6.dp))
+        }
+        if (showChevron) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = TraviraTextTertiary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun IconBubble(icon: ImageVector, tint: Color, bg: Color) {
     Box(
         modifier = Modifier
-            .size(42.dp)
-            .clip(CircleShape)
-            .background(color.copy(alpha = 0.12f))
-            .clickable(onClick = onClick),
+            .size(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(bg),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
     }
+}
+
+@Composable
+private fun ThinDivider(color: Color) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp)
+            .height(1.dp)
+            .background(color.copy(alpha = 0.5f))
+    )
 }
 
 private fun openUrl(context: android.content.Context, url: String) {

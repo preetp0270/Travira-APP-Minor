@@ -68,6 +68,11 @@ interface AuthApi {
         @Header("Authorization") bearer: String
     ): VisitedPlacesResponse
 
+    @GET("api/users/my-ratings")
+    suspend fun getMyRatings(
+        @Header("Authorization") bearer: String
+    ): MyRatingsResponse
+
     @POST("api/users/visited/{id}")
     suspend fun addVisitedPlace(
         @Header("Authorization") bearer: String,

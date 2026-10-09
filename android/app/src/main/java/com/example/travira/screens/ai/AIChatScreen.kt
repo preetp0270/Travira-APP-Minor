@@ -1,6 +1,9 @@
 package com.example.travira.screens.ai
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,20 +12,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -42,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -55,12 +64,22 @@ import com.example.travira.remote.RetrofitInstance
 import kotlinx.coroutines.launch
 
 private val BrandBlue = Color(0xFF1565C0)
+private val CanvasIce = Color(0xFFF0F6FC)
+private val TextPrimary = Color(0xFF0D1B2A)
+private val TextSecondary = Color(0xFF546E7A)
 
 private data class UiMessage(
     val id: String,
     val text: String,
     val isUser: Boolean,
     val isError: Boolean = false
+)
+
+private val SuggestedPrompts = listOf(
+    "Plan 3 days in Goa",
+    "Best street food in Kyoto",
+    "Budget itinerary for Amalfi",
+    "Cultural tips for Japan"
 )
 
 @Composable
@@ -70,18 +89,16 @@ fun AIChatScreen(
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
-    val messages = remember {
-        mutableStateListOf(
-            UiMessage(
-                id = "welcome",
-                text = "Hi! I’m Travira AI — your travel companion. Ask about destinations, itineraries, packing, visas, food, or safety tips.",
-                isUser = false
-            )
-        )
-    }
+    val welcome = UiMessage(
+        id = "welcome",
+        text = "Hello! I’m Travira AI — your Gemini travel guide. Ask about destinations, itineraries, culture, food, or packing tips.",
+        isUser = false
+    )
+    val messages = remember { mutableStateListOf(welcome) }
     var input by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val showPrompts = messages.size <= 1 && !sending
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -89,8 +106,14 @@ fun AIChatScreen(
         }
     }
 
-    fun send() {
-        val text = input.trim()
+    fun resetChat() {
+        messages.clear()
+        messages.add(welcome)
+        input = ""
+    }
+
+    fun send(textOverride: String? = null) {
+        val text = (textOverride ?: input).trim()
         if (text.isEmpty() || sending) return
 
         val token = tokenManager.accessToken
@@ -113,7 +136,7 @@ fun AIChatScreen(
             try {
                 val history = messages
                     .filter { it.id != "welcome" && !it.isError }
-                    .dropLast(1) // exclude the message we just added from history duplication; include prior turns
+                    .dropLast(1)
                     .takeLast(12)
                     .map {
                         ChatHistoryTurn(
@@ -155,54 +178,61 @@ fun AIChatScreen(
         }
     }
 
-    val colors = MaterialTheme.colorScheme
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.3f
+    val bg = if (isDark) MaterialTheme.colorScheme.background else CanvasIce
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.background)
+            .background(bg)
+            .statusBarsPadding()
             .imePadding()
-            // Keep content above system nav + Travira bottom bar
             .padding(bottom = 108.dp)
     ) {
-        // Glass-style header
+        // Stitch header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    androidx.compose.ui.graphics.Brush.horizontalGradient(
-                        listOf(Color(0xFF0B1D2A), Color(0xFF1565C0), Color(0xFF1976D2))
-                    )
-                )
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.22f)),
+                    .background(BrandBlue.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.SmartToy,
-                    contentDescription = null,
-                    tint = Color.White
-                )
+                Icon(Icons.Default.SmartToy, contentDescription = null, tint = BrandBlue)
             }
             Spacer(Modifier.size(12.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Travira AI",
-                    color = Color.White,
+                    "Travira AI Assistant",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
+                    fontSize = 17.sp,
+                    color = if (isDark) Color.White else TextPrimary
                 )
-                // Backend: gemini-3.8-flash primary, gemini-3.5-flash-lite fallback
-                Text(
-                    "Travel-only assistant · Gemini 3.8 Flash",
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 12.sp
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = BrandBlue,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(Modifier.size(4.dp))
+                    Text(
+                        "Gemini · Travel companion",
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            IconButton(onClick = { resetChat() }) {
+                Icon(
+                    Icons.Default.RestartAlt,
+                    contentDescription = "Reset",
+                    tint = TextSecondary
                 )
             }
         }
@@ -212,17 +242,49 @@ fun AIChatScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 12.dp,
-                bottom = 8.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(messages, key = { it.id }) { msg ->
-                MessageBubble(msg)
+                MessageBubble(msg, isDark)
             }
+
+            if (showPrompts) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Try asking:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextSecondary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            SuggestedPrompts.forEach { prompt ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(Color.White)
+                                        .border(1.dp, Color(0xFFBAE6FD), RoundedCornerShape(20.dp))
+                                        .clickable { send(prompt) }
+                                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                                ) {
+                                    Text(
+                                        prompt,
+                                        fontSize = 13.sp,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (sending) {
                 item {
                     Row(
@@ -231,12 +293,13 @@ fun AIChatScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 4.dp, bottomEnd = 18.dp))
                                 .background(Color.White)
-                                .padding(horizontal = 14.dp, vertical = 12.dp)
+                                .shadow(2.dp, RoundedCornerShape(18.dp))
+                                .padding(horizontal = 16.dp, vertical = 14.dp)
                         ) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
+                                modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.dp,
                                 color = BrandBlue
                             )
@@ -246,69 +309,96 @@ fun AIChatScreen(
             }
         }
 
-        // Input bar — sits above the bottom navigation
+        // Input bar — pill style (Stitch)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = input,
-                onValueChange = { if (it.length <= 2000) input = it },
+                onValueChange = { input = it },
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 48.dp),
-                placeholder = { Text("Ask about trips, places, tips…") },
+                placeholder = {
+                    Text("Ask Travira AI…", color = TextSecondary, fontSize = 14.sp)
+                },
                 shape = RoundedCornerShape(24.dp),
-                maxLines = 3,
-                singleLine = false,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { send() }),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = BrandBlue,
                     unfocusedBorderColor = Color(0xFFCFD8DC),
-                    cursorColor = BrandBlue,
-                    focusedContainerColor = colors.surface,
-                    unfocusedContainerColor = colors.surface
-                )
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    cursorColor = BrandBlue
+                ),
+                maxLines = 4,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { send() }),
+                enabled = !sending
             )
             Spacer(Modifier.size(8.dp))
-            IconButton(
-                onClick = { send() },
-                enabled = !sending && input.isNotBlank(),
+            Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(if (!sending && input.isNotBlank()) BrandBlue else Color(0xFFB0BEC5))
+                    .background(BrandBlue)
+                    .clickable(enabled = !sending && input.isNotBlank()) { send() },
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
-                    tint = Color.White
-                )
+                if (sending) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                } else {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Send",
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun MessageBubble(msg: UiMessage) {
+private fun MessageBubble(msg: UiMessage, isDark: Boolean) {
     val isUser = msg.isUser
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
+        if (!isUser) {
+            Box(
+                modifier = Modifier
+                    .padding(end = 8.dp, top = 4.dp)
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(BrandBlue.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.SmartToy,
+                    contentDescription = null,
+                    tint = BrandBlue,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
         Box(
             modifier = Modifier
-                .widthIn(max = 320.dp)
+                .widthIn(max = 300.dp)
                 .clip(
                     RoundedCornerShape(
-                        topStart = 16.dp,
-                        topEnd = 16.dp,
-                        bottomStart = if (isUser) 16.dp else 4.dp,
-                        bottomEnd = if (isUser) 4.dp else 16.dp
+                        topStart = 18.dp,
+                        topEnd = 18.dp,
+                        bottomStart = if (isUser) 18.dp else 4.dp,
+                        bottomEnd = if (isUser) 4.dp else 18.dp
                     )
                 )
                 .background(
@@ -318,18 +408,30 @@ private fun MessageBubble(msg: UiMessage) {
                         else -> Color.White
                     }
                 )
-                .padding(horizontal = 14.dp, vertical = 10.dp)
+                .then(
+                    if (!isUser && !msg.isError) {
+                        Modifier.border(1.dp, Color(0xFFE3F2FD), RoundedCornerShape(18.dp))
+                    } else Modifier
+                )
+                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             Text(
                 text = msg.text,
                 color = when {
                     msg.isError -> Color(0xFFC62828)
                     isUser -> Color.White
-                    else -> Color(0xFF212121)
+                    else -> TextPrimary
                 },
-                fontSize = 15.sp,
-                lineHeight = 21.sp
+                fontSize = 14.sp,
+                lineHeight = 20.sp
             )
         }
     }
+}
+
+private fun Color.luminance(): Float {
+    val r = red
+    val g = green
+    val b = blue
+    return 0.2126f * r + 0.7152f * g + 0.0722f * b
 }

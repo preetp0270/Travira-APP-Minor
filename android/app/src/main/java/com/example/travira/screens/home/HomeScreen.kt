@@ -10,6 +10,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,11 +30,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
@@ -96,13 +100,13 @@ private val TopPillHorizontalPadding = 24.dp
  * Change this value manually to tune the gap — e.g. 28.dp, 36.dp, 44.dp.
  * File: screens/home/HomeScreen.kt → TopPillTopGap
  */
-private val TopPillTopGap = 36.dp
+private val TopPillTopGap = 20.dp
 private val TopPillShape = RoundedCornerShape(36.dp)
 /**
  * Clearance under the pill so list content does not sit under it.
  * If you increase [TopPillTopGap] a lot, bump this slightly too.
  */
-private val TopContentClearance = 118.dp
+private val TopContentClearance = 96.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,6 +123,10 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     var query by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Popular") }
+    val categories = listOf(
+        "Popular", "Beach", "Mountains", "Heritage", "Foodie Spots", "Hidden Gems"
+    )
     val pullState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
     val density = LocalDensity.current
@@ -164,22 +172,37 @@ fun HomeScreen(
         label = "headerOffset"
     )
 
-    val filtered = remember(places, query) {
+    val filtered = remember(places, query, selectedCategory) {
         val q = query.trim()
-        if (q.isEmpty()) places
-        else {
-            places.filter { p ->
+        var list = places
+        if (q.isNotEmpty()) {
+            list = list.filter { p ->
                 listOfNotNull(
-                    p.name,
-                    p.city,
-                    p.state,
-                    p.country,
-                    p.location,
-                    p.shortDescription,
-                    p.description
+                    p.name, p.city, p.state, p.country, p.location,
+                    p.shortDescription, p.description
                 ).any { it.contains(q, ignoreCase = true) }
             }
         }
+        if (selectedCategory != "Popular") {
+            val keywords = when (selectedCategory) {
+                "Beach" -> listOf("beach", "coast", "island", "sea", "bay", "ocean")
+                "Mountains" -> listOf("mountain", "hill", "peak", "alps", "trek", "alpine")
+                "Heritage" -> listOf("heritage", "temple", "fort", "palace", "museum", "historic", "taj")
+                "Foodie Spots" -> listOf("food", "cuisine", "restaurant", "street food", "market")
+                "Hidden Gems" -> listOf("hidden", "secret", "village", "quiet", "offbeat")
+                else -> emptyList()
+            }
+            if (keywords.isNotEmpty()) {
+                val matched = list.filter { p ->
+                    val blob = listOfNotNull(
+                        p.name, p.shortDescription, p.description, p.city, p.country, p.location
+                    ).joinToString(" ").lowercase()
+                    keywords.any { blob.contains(it) }
+                }
+                if (matched.isNotEmpty()) list = matched
+            }
+        }
+        list
     }
 
     fun openRandomPlace() {
@@ -288,24 +311,102 @@ fun HomeScreen(
                                 }
                             }
                         } else {
+                            // Greeting — compact
+                            item {
+                                val greetName = userName?.trim()?.takeIf { it.isNotBlank() }?.substringBefore(" ")
+                                    ?: "explorer"
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp)
+                                ) {
+                                    Text(
+                                        text = "Where to next,",
+                                        fontSize = 13.sp,
+                                        color = colors.onBackground.copy(alpha = 0.55f)
+                                    )
+                                    Text(
+                                        text = "$greetName?",
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Serif,
+                                        color = colors.onBackground
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = "Find places you’ll love — search or pick a category.",
+                                        fontSize = 12.sp,
+                                        color = colors.onBackground.copy(alpha = 0.6f),
+                                        lineHeight = 16.sp
+                                    )
+                                }
+                            }
+
+                            // Category chips (Stitch)
                             item {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 20.dp),
+                                        .horizontalScroll(rememberScrollState())
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    categories.forEach { cat ->
+                                        val selected = cat == selectedCategory
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(20.dp))
+                                                .background(
+                                                    if (selected) Color(0xFFE0F2FE) else Color.White
+                                                )
+                                                .border(
+                                                    width = if (selected) 1.5.dp else 1.dp,
+                                                    color = if (selected) Color(0xFF0284C7) else Color(0xFFCFD8DC),
+                                                    shape = RoundedCornerShape(20.dp)
+                                                )
+                                                .clickable { selectedCategory = cat }
+                                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (cat == "Popular" && selected) {
+                                                    Icon(
+                                                        Icons.Default.AutoAwesome,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFF0284C7),
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                    Spacer(Modifier.width(4.dp))
+                                                }
+                                                Text(
+                                                    text = cat,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                                                    color = if (selected) Color(0xFF0284C7) else Color(0xFF546E7A)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp, vertical = 4.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = if (query.isBlank()) "Trending now" else "Results",
-                                        fontSize = 22.sp,
+                                        text = if (query.isBlank()) "Curated Journeys" else "Results",
+                                        fontSize = 20.sp,
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Serif,
                                         color = colors.onBackground
                                     )
                                     Text(
-                                        text = "${filtered.size} place${if (filtered.size == 1) "" else "s"}",
-                                        fontSize = 14.sp,
+                                        text = "${filtered.size} Destinations",
+                                        fontSize = 13.sp,
                                         color = colors.onBackground.copy(alpha = 0.55f)
                                     )
                                 }

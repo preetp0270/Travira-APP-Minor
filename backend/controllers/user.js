@@ -617,3 +617,47 @@ exports.removeVisitedPlace = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/** GET /api/users/my-ratings — places this user has rated (stars + feedback) */
+exports.getMyRatings = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const places = await Place.find({ "ratings.user": userId })
+      .select(
+        "name shortDescription city state country location imageUrl averageRating visitorsCount ratings"
+      )
+      .lean();
+
+    const reviews = (places || []).map((p) => {
+      const mine = (p.ratings || []).find(
+        (r) => r.user && r.user.toString() === userId.toString()
+      );
+      return {
+        placeId: p._id,
+        name: p.name,
+        shortDescription: p.shortDescription || "",
+        city: p.city || "",
+        state: p.state || "",
+        country: p.country || "",
+        location: p.location || "",
+        imageUrl: p.imageUrl || "",
+        averageRating: p.averageRating || 0,
+        visitorsCount: p.visitorsCount || 0,
+        myRating: mine ? mine.value : 0,
+        myFeedback: mine ? mine.feedback || "" : "",
+        ratedAt: mine ? mine.createdAt : null
+      };
+    });
+
+    // Newest first
+    reviews.sort((a, b) => {
+      const ta = a.ratedAt ? new Date(a.ratedAt).getTime() : 0;
+      const tb = b.ratedAt ? new Date(b.ratedAt).getTime() : 0;
+      return tb - ta;
+    });
+
+    res.json({ success: true, reviews, count: reviews.length });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

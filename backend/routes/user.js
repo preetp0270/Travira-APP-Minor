@@ -20,6 +20,7 @@ const {
   getVisitedPlaces,
   addVisitedPlace,
   removeVisitedPlace,
+  getMyRatings,
   forgotPassword,
   resetPassword
 } = require("../controllers/user");
@@ -42,6 +43,8 @@ router.put("/notifications/read", authMiddleware, markNotificationsRead);
 router.get("/visited", authMiddleware, getVisitedPlaces);
 router.post("/visited/:id", authMiddleware, addVisitedPlace);
 router.delete("/visited/:id", authMiddleware, removeVisitedPlace);
+
+router.get("/my-ratings", authMiddleware, getMyRatings);
 
 router.post("/logout", authMiddleware, logout);
 router.post("/logout-all", authMiddleware, logoutAll);

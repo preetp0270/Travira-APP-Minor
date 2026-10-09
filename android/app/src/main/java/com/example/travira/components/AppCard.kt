@@ -1,21 +1,26 @@
 package com.example.travira.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,12 +34,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.example.travira.model.Place
 
+/**
+ * Stitch Azure Horizon destination card:
+ * full-bleed photo, gradient scrim, serif title, rating + visitors, glass heart.
+ */
 @Composable
 fun AppCard(
     place: Place,
@@ -48,9 +59,10 @@ fun AppCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(210.dp),
+            .height(230.dp),
         shape = RoundedCornerShape(22.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1B2A))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
@@ -60,15 +72,17 @@ fun AppCard(
                 contentScale = ContentScale.Crop
             )
 
+            // 3-stop scrim (Stitch DESIGN.md)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.78f)
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                0.45f to Color.Transparent,
+                                0.72f to Color.Black.copy(alpha = 0.35f),
+                                1.0f to Color.Black.copy(alpha = 0.85f)
                             )
                         )
                     )
@@ -79,10 +93,11 @@ fun AppCard(
                     onClick = onWishlistClick,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
+                        .padding(10.dp)
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f))
+                        .background(Color.Black.copy(alpha = 0.30f))
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape)
                 ) {
                     Icon(
                         imageVector = if (isWishlisted) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -94,18 +109,22 @@ fun AppCard(
             }
 
             if (showVisitedBadge) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Visited",
-                    tint = Color(0xFF4CAF50),
+                Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(12.dp)
                         .size(28.dp)
                         .clip(CircleShape)
-                        .background(Color.White)
-                        .padding(2.dp)
-                )
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Visited",
+                        tint = Color(0xFF2E7D32),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             Column(
@@ -113,45 +132,101 @@ fun AppCard(
                     .fillMaxWidth()
                     .align(Alignment.BottomStart)
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = place.name,
                     color = Color.White,
-                    fontSize = 24.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
+                    fontFamily = FontFamily.Serif,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
 
-                val subtitle = place.shortDescription?.takeIf { it.isNotBlank() }
-                    ?: listOfNotNull(place.city, place.state)
-                        .joinToString(", ")
-                        .ifBlank { place.country ?: "" }
-                if (subtitle.isNotBlank()) {
-                    Text(
-                        text = subtitle,
-                        color = Color.White.copy(alpha = 0.90f),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 2
-                    )
+                val loc = place.locationLine.ifBlank {
+                    place.location.orEmpty()
+                }.ifBlank {
+                    place.shortDescription.orEmpty()
+                }
+                if (loc.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = Color(0xFFE0F2FE),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        Text(
+                            text = loc,
+                            color = Color(0xFFE0F2FE),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Rating",
-                        tint = Color(0xFFFFD54F),
-                        modifier = Modifier.height(16.dp)
-                    )
-                    Text(
-                        text = " ${String.format("%.1f", place.displayRating)}",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Rating pill
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.White.copy(alpha = 0.18f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = null,
+                            tint = Color(0xFFFFB300),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            text = String.format("%.1f", place.displayRating),
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (place.ratingsCount > 0) {
+                            Text(
+                                text = " (${formatCompact(place.ratingsCount)})",
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    // Visitors
+                    if (place.visitorsCount > 0) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.People,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Text(
+                                text = "${formatCompact(place.visitorsCount)} visited",
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+private fun formatCompact(n: Int): String = when {
+    n >= 1_000_000 -> String.format("%.1fM", n / 1_000_000.0)
+    n >= 1_000 -> String.format("%.1fk", n / 1_000.0).replace(".0k", "k")
+    else -> n.toString()
 }

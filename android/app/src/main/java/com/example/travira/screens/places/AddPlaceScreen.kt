@@ -101,7 +101,7 @@ fun AddPlaceScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add a Place") },
+                title = { Text("Admin · Add Place") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

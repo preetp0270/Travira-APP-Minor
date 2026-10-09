@@ -289,35 +289,43 @@ fun PlaceScreen(
                     }
                 }
 
-                // Country + title overlay at bottom of hero
+                // Full address + title overlay at bottom of hero
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(horizontal = 20.dp, vertical = 24.dp)
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.95f),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = place.countryOrFallback,
-                            color = Color.White.copy(alpha = 0.95f),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                    val addressLine = place.locationLine.ifBlank {
+                        place.location.orEmpty()
+                    }.ifBlank {
+                        place.countryOrFallback
                     }
-                    Spacer(Modifier.height(4.dp))
+                    if (addressLine.isNotBlank() && addressLine != "—") {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.95f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = addressLine,
+                                color = Color.White.copy(alpha = 0.95f),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 2
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                    }
                     Text(
                         text = place.name,
                         color = Color.White,
-                        fontSize = 36.sp,
+                        fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Serif,
-                        lineHeight = 40.sp
+                        lineHeight = 36.sp
                     )
                 }
             }
@@ -533,38 +541,38 @@ fun PlaceScreen(
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
 
                 // Description
                 Text(
                     text = "About",
-                    fontSize = 20.sp,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.onBackground,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = place.description?.takeIf { it.isNotBlank() }
+                        ?: place.shortDescription
+                        ?: "No description yet.",
+                    fontSize = 14.sp,
+                    lineHeight = 21.sp,
+                    color = colors.onBackground.copy(alpha = 0.72f),
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+
+                Spacer(Modifier.height(14.dp))
+
+                // Single location card → opens system Maps app
+                Text(
+                    text = "Location",
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.onBackground,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    text = place.description?.takeIf { it.isNotBlank() }
-                        ?: place.shortDescription
-                        ?: "No description yet.",
-                    fontSize = 15.sp,
-                    lineHeight = 24.sp,
-                    color = colors.onBackground.copy(alpha = 0.72f),
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-
-                Spacer(Modifier.height(24.dp))
-
-                // Single location card → opens system Maps app
-                Text(
-                    text = "Location",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.onBackground,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-                Spacer(Modifier.height(10.dp))
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()

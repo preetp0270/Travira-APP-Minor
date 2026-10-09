@@ -144,6 +144,36 @@ data class RatePlaceRequest(
     val feedback: String? = null
 )
 
+data class MyRatingsResponse(
+    val success: Boolean = false,
+    val reviews: List<MyReviewItem> = emptyList(),
+    val count: Int = 0,
+    val message: String? = null
+)
+
+data class MyReviewItem(
+    val placeId: String = "",
+    val name: String = "",
+    val shortDescription: String = "",
+    val city: String = "",
+    val state: String = "",
+    val country: String = "",
+    val location: String = "",
+    val imageUrl: String = "",
+    val averageRating: Double = 0.0,
+    val visitorsCount: Int = 0,
+    val myRating: Int = 0,
+    val myFeedback: String = "",
+    val ratedAt: String? = null
+) {
+    val locationLine: String
+        get() = listOfNotNull(
+            city.takeIf { it.isNotBlank() },
+            state.takeIf { it.isNotBlank() },
+            country.takeIf { it.isNotBlank() }
+        ).joinToString(", ").ifBlank { location }
+}
+
 data class RatePlaceResponse(
     val success: Boolean = false,
     val message: String? = null,

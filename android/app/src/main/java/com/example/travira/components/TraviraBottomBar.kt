@@ -43,7 +43,7 @@ fun TraviraBottomBar(
 ) {
     val items = listOf(
         BottomBarItem("Home", Icons.Default.Home),
-        BottomBarItem("AI", Icons.Default.SmartToy),
+        BottomBarItem("AI Travel", Icons.Default.SmartToy),
         BottomBarItem("Profile", Icons.Default.Person)
     )
 

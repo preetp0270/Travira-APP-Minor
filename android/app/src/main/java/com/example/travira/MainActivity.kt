@@ -37,9 +37,9 @@ import com.example.travira.screens.home.HomeScreen
 import com.example.travira.screens.places.AddPlaceScreen
 import com.example.travira.screens.places.EditPlaceScreen
 import com.example.travira.screens.places.PlaceScreen
-import com.example.travira.screens.profile.NotificationsScreen
 import com.example.travira.screens.profile.ProfileScreen
 import com.example.travira.screens.profile.ProfileSection
+import com.example.travira.screens.profile.ReviewsScreen
 import com.example.travira.screens.profile.VisitedPlacesScreen
 import com.example.travira.screens.profile.WishlistScreen
 import com.example.travira.screens.splash.IntroVideoScreen
@@ -382,14 +382,15 @@ fun TraviraApp(
             )
         }
 
-        profileSection == ProfileSection.NOTIFICATIONS -> {
+        profileSection == ProfileSection.REVIEWS -> {
             BackHandler { profileSection = null }
-            NotificationsScreen(
+            ReviewsScreen(
                 tokenManager = tokenManager,
                 onBack = {
                     profileSection = null
                     refreshUser()
-                }
+                },
+                onPlaceClick = { selectedPlace = it }
             )
         }
 
@@ -480,6 +481,7 @@ fun TraviraApp(
                                 }
                             },
                             onSectionClick = { section -> profileSection = section },
+                            onAdminClick = { showAddPlace = true },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
