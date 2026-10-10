@@ -1,5 +1,8 @@
 package com.example.travira.screens.places
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -371,3 +374,26 @@ private fun EditField(
         maxLines = if (singleLine) 1 else 6
     )
 }
+
+
+@Preview(showBackground = true, name = "Edit Place", showSystemUi = true)
+@Composable
+private fun EditPlaceScreenPreview() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    TraviraTheme {
+        EditPlaceScreen(
+            place = Place(
+                _id = "1",
+                name = "Amir Timur Square",
+                city = "Tashkent",
+                country = "Uzbekistan",
+                shortDescription = "Historic square",
+                description = "A landmark plaza."
+            ),
+            tokenManager = com.example.travira.auth.TokenManager(context),
+            onBack = {},
+            onSaved = {}
+        )
+    }
+}
+

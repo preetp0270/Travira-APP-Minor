@@ -1,5 +1,8 @@
 package com.example.travira.components
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -230,3 +233,28 @@ private fun formatCompact(n: Int): String = when {
     n >= 1_000 -> String.format("%.1fk", n / 1_000.0).replace(".0k", "k")
     else -> n.toString()
 }
+
+
+@Preview(showBackground = true, name = "Place Card")
+@Composable
+private fun AppCardPreview() {
+    TraviraTheme {
+        AppCard(
+            place = Place(
+                _id = "1",
+                name = "Amir Timur Square",
+                city = "Tashkent",
+                country = "Uzbekistan",
+                location = "Tashkent, Uzbekistan",
+                rating = 4.2,
+                averageRating = 4.2,
+                ratingsCount = 92,
+                visitorsCount = 902
+            ),
+            onClick = {},
+            showWishlistHeart = true,
+            isWishlisted = false
+        )
+    }
+}
+

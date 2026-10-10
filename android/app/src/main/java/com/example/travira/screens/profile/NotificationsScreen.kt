@@ -1,5 +1,8 @@
 package com.example.travira.screens.profile
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -203,3 +206,17 @@ fun NotificationsScreen(
         }
     }
 }
+
+
+@Preview(showBackground = true, name = "Notifications", showSystemUi = true)
+@Composable
+private fun NotificationsScreenPreview() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    TraviraTheme {
+        NotificationsScreen(
+            tokenManager = com.example.travira.auth.TokenManager(context),
+            onBack = {}
+        )
+    }
+}
+

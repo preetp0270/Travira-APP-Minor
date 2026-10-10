@@ -678,3 +678,51 @@ private fun HomeTopPillPreview() {
         }
     }
 }
+
+@Preview(showBackground = true, name = "Home – Loaded", showSystemUi = true)
+@Composable
+private fun HomeScreenPreview() {
+    MaterialTheme {
+        HomeScreen(
+            places = listOf(
+                Place(
+                    _id = "1",
+                    name = "Tashkent Amir Timur Square",
+                    city = "Tashkent",
+                    country = "Uzbekistan",
+                    location = "Tashkent, Uzbekistan",
+                    rating = 3.0,
+                    averageRating = 3.0,
+                    ratingsCount = 92,
+                    visitorsCount = 902
+                ),
+                Place(
+                    _id = "2",
+                    name = "Himalayan Viewpoint",
+                    city = "Manali",
+                    country = "India",
+                    location = "Manali, Himachal Pradesh",
+                    rating = 4.5,
+                    averageRating = 4.5,
+                    ratingsCount = 120,
+                    visitorsCount = 1500
+                )
+            ),
+            isLoading = false,
+            onPlaceClick = {},
+            userName = "Preet"
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Home – Loading")
+@Composable
+private fun HomeScreenLoadingPreview() {
+    MaterialTheme {
+        HomeScreen(
+            places = emptyList(),
+            isLoading = true,
+            onPlaceClick = {}
+        )
+    }
+}

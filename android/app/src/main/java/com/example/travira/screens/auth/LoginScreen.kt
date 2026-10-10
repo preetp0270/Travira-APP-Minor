@@ -1,5 +1,7 @@
 package com.example.travira.screens.auth
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
@@ -457,6 +459,20 @@ fun LoginScreen(
                 tint = Color.White
             )
         }
+    }
+}
+
+@Preview(showBackground = true, name = "Login", showSystemUi = true)
+@Composable
+private fun LoginScreenPreview() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    TraviraTheme {
+        LoginScreen(
+            tokenManager = com.example.travira.auth.TokenManager(context),
+            onLoginSuccess = {},
+            onBack = {},
+            onForgotPassword = {}
+        )
     }
 }
 

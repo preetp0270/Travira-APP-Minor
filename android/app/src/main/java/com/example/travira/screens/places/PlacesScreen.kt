@@ -1,5 +1,8 @@
 package com.example.travira.screens.places
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -772,3 +775,29 @@ private fun formatCount(n: Int): String {
         else -> n.toString()
     }
 }
+
+
+@Preview(showBackground = true, name = "Place Detail", showSystemUi = true)
+@Composable
+private fun PlaceScreenPreview() {
+    TraviraTheme {
+        PlaceScreen(
+            place = Place(
+                _id = "1",
+                name = "Amir Timur Square",
+                shortDescription = "Historic square in the heart of Tashkent",
+                description = "A landmark plaza featuring a bronze statue of Amir Timur.",
+                city = "Tashkent",
+                state = "Tashkent",
+                country = "Uzbekistan",
+                location = "Tashkent, Uzbekistan",
+                rating = 4.2,
+                averageRating = 4.2,
+                ratingsCount = 92,
+                visitorsCount = 902
+            ),
+            onBackClick = {}
+        )
+    }
+}
+

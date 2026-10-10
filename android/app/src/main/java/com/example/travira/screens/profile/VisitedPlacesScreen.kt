@@ -1,5 +1,8 @@
 package com.example.travira.screens.profile
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -171,3 +174,18 @@ fun VisitedPlacesScreen(
         }
     }
 }
+
+
+@Preview(showBackground = true, name = "Visited Places", showSystemUi = true)
+@Composable
+private fun VisitedPlacesScreenPreview() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    TraviraTheme {
+        VisitedPlacesScreen(
+            tokenManager = com.example.travira.auth.TokenManager(context),
+            onBack = {},
+            onPlaceClick = {}
+        )
+    }
+}
+

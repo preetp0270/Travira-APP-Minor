@@ -1,5 +1,8 @@
 package com.example.travira.screens.splash
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,3 +63,29 @@ fun SplashScreen(
 //        }
 //    }
 }
+
+
+@Preview(showBackground = true, name = "Splash", showSystemUi = true)
+@Composable
+private fun SplashScreenPreview() {
+    TraviraTheme {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF0B1D2A), Color(0xFF1565C0))
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Travira",
+                color = Color.White,
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+

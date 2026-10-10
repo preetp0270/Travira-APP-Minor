@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -91,6 +93,8 @@ import com.example.travira.ui.theme.TraviraTextSecondary
 import com.example.travira.ui.theme.TraviraTextTertiary
 import com.example.travira.ui.theme.TraviraWhite
 import com.example.travira.ui.theme.TraviraBrandFont
+import com.example.travira.ui.theme.TraviraTheme
+import androidx.compose.ui.tooling.preview.Preview
 
 enum class ProfileSection {
     WISHLIST, VISITED, REVIEWS
@@ -209,81 +213,77 @@ fun ProfileScreen(
                 .padding(bottom = 120.dp)
                 .navigationBarsPadding()
         ) {
-            // Top bar — brand font matches home; Admin label when admin
-            Row(
+
+            // Travira brand title
+            Text(
+                text = "Travira",
+                fontFamily = TraviraBrandFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 42.sp,
+                color = TraviraBlue,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                softWrap = false,
+                style = androidx.compose.ui.text.TextStyle(
+                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                        includeFontPadding = false
+                    ),
+                    lineHeight = 42.sp,
+                    lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+                        alignment = androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+                        trim = androidx.compose.ui.text.style.LineHeightStyle.Trim.Both
+                    )
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Travira",
-                        fontFamily = TraviraBrandFont,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 26.sp,
-                        color = TraviraBlue
-                    )
-                    Text(
-                        text = if (isAdmin) "Admin" else "User Profile",
-                        fontSize = 12.sp,
-                        color = textTertiary,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 20.dp)
 
-            Spacer(Modifier.height(8.dp))
+            )
 
-            // Hero profile card
+            // Hero profile card — reduced gap below the title
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
+                    .offset(y = (-30).dp)
                     .shadow(
-                        elevation = 12.dp,
-                        shape = RoundedCornerShape(24.dp),
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(20.dp),
                         ambientColor = Color(0x331565C0),
                         spotColor = Color(0x221565C0)
                     )
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(20.dp))
                     .background(cardBg)
             ) {
-                // Ambient sky gradient accent
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color(0xFF1565C0).copy(alpha = 0.12f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 12.dp,
+                            bottom = 12.dp
+                        ),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Avatar with ring
                     Box(contentAlignment = Alignment.BottomEnd) {
                         Box(
                             modifier = Modifier
-                                .size(88.dp)
+                                .size(68.dp)
                                 .border(
-                                    width = 3.dp,
+                                    width = 2.5.dp,
                                     brush = Brush.linearGradient(
-                                        listOf(TraviraBlue, TraviraSky, TraviraBlueLight)
+                                        listOf(
+                                            TraviraBlue,
+                                            TraviraSky,
+                                            TraviraBlueLight
+                                        )
                                     ),
                                     shape = CircleShape
                                 )
-                                .padding(4.dp)
+                                .padding(3.dp)
                                 .clip(CircleShape)
                                 .background(TraviraIce),
                             contentAlignment = Alignment.Center
@@ -292,13 +292,14 @@ fun ProfileScreen(
                                 Icons.Default.Person,
                                 contentDescription = null,
                                 tint = TraviraBlue,
-                                modifier = Modifier.size(44.dp)
+                                modifier = Modifier.size(34.dp)
                             )
                         }
+
                         if (isLoggedIn) {
                             Box(
                                 modifier = Modifier
-                                    .size(26.dp)
+                                    .size(22.dp)
                                     .clip(CircleShape)
                                     .background(TraviraBlue)
                                     .border(2.dp, cardBg, CircleShape),
@@ -308,42 +309,49 @@ fun ProfileScreen(
                                     Icons.Default.Verified,
                                     contentDescription = "Verified",
                                     tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(12.dp)
                                 )
                             }
                         }
                     }
 
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     Text(
                         text = displayName,
                         fontFamily = FontFamily.Serif,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
+                        fontSize = 20.sp,
                         color = textPrimary
                     )
 
                     if (email.isNotBlank()) {
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = email,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             color = textSecondary
                         )
                     }
 
+                    val roleLabel = when {
+                        !isLoggedIn -> "Guest"
+                        isAdmin -> "Admin"
+                        else -> "User"
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
                     if (userLocation.isNotBlank()) {
-                        Spacer(Modifier.height(6.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
                                 Icons.Default.Place,
                                 contentDescription = null,
                                 tint = textTertiary,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(13.dp)
                             )
                             Text(
                                 text = userLocation,
@@ -352,20 +360,38 @@ fun ProfileScreen(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            Text(
+                                "·",
+                                fontSize = 12.sp,
+                                color = textTertiary
+                            )
+                            Text(
+                                text = roleLabel,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isAdmin) TraviraBlue else textSecondary
+                            )
                         }
+                    } else {
+                        Text(
+                            text = roleLabel,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isAdmin) TraviraBlue else textSecondary
+                        )
                     }
 
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(4.dp))
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
                             Icons.Default.Explore,
                             contentDescription = null,
                             tint = TraviraBlue,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Text(
                             text = if (isLoggedIn) {
@@ -373,29 +399,32 @@ fun ProfileScreen(
                             } else {
                                 "Guest explorer"
                             },
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = TraviraSecondaryBright
                         )
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
 
                     Text(
                         text = bio,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         color = textSecondary,
                         textAlign = TextAlign.Center,
-                        lineHeight = 18.sp,
-                        maxLines = 3,
+                        lineHeight = 16.sp,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     if (!isLoggedIn) {
                         Spacer(Modifier.height(16.dp))
+
                         Button(
                             onClick = onLoginClick,
-                            colors = ButtonDefaults.buttonColors(containerColor = TraviraBlue),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = TraviraBlue
+                            ),
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -981,5 +1010,57 @@ private fun openUrl(context: android.content.Context, url: String) {
     try {
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     } catch (_: Exception) {
+    }
+}
+
+@Preview(showBackground = true, name = "Profile – Guest", showSystemUi = true)
+@Composable
+private fun ProfileScreenGuestPreview() {
+    TraviraTheme {
+        ProfileScreen(
+            isLoggedIn = false,
+            user = null,
+            onLoginClick = {},
+            onLogoutClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Profile – User", showSystemUi = true)
+@Composable
+private fun ProfileScreenUserPreview() {
+    TraviraTheme {
+        ProfileScreen(
+            isLoggedIn = true,
+            user = User(
+                id = "1",
+                name = "Preet Patel",
+                email = "preetp0270@gmail.com",
+                role = "user",
+                location = "Surat",
+                bio = "Explore smarter. Discover deeper. Travel with confidence."
+            ),
+            onLoginClick = {},
+            onLogoutClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Profile – Admin", showSystemUi = true)
+@Composable
+private fun ProfileScreenAdminPreview() {
+    TraviraTheme {
+        ProfileScreen(
+            isLoggedIn = true,
+            user = User(
+                id = "1",
+                name = "Preet Patel",
+                email = "preetp0270@gmail.com",
+                role = "admin",
+                location = "Surat"
+            ),
+            onLoginClick = {},
+            onLogoutClick = {}
+        )
     }
 }

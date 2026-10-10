@@ -1,5 +1,8 @@
 package com.example.travira.screens.auth
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -243,3 +246,13 @@ fun ForgotPasswordScreen(
         }
     }
 }
+
+
+@Preview(showBackground = true, name = "Forgot Password", showSystemUi = true)
+@Composable
+private fun ForgotPasswordScreenPreview() {
+    TraviraTheme {
+        ForgotPasswordScreen(onBack = {})
+    }
+}
+

@@ -1,5 +1,8 @@
 package com.example.travira.screens.ai
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -435,3 +438,17 @@ private fun Color.luminance(): Float {
     val b = blue
     return 0.2126f * r + 0.7152f * g + 0.0722f * b
 }
+
+
+@Preview(showBackground = true, name = "AI Chat", showSystemUi = true)
+@Composable
+private fun AIChatScreenPreview() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    TraviraTheme {
+        AIChatScreen(
+            tokenManager = com.example.travira.auth.TokenManager(context),
+            onRequireLogin = {}
+        )
+    }
+}
+

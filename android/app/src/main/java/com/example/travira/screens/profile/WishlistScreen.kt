@@ -1,5 +1,8 @@
 package com.example.travira.screens.profile
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -140,3 +143,18 @@ fun WishlistScreen(
         }
     }
 }
+
+
+@Preview(showBackground = true, name = "Wishlist", showSystemUi = true)
+@Composable
+private fun WishlistScreenPreview() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    TraviraTheme {
+        WishlistScreen(
+            tokenManager = com.example.travira.auth.TokenManager(context),
+            onBack = {},
+            onPlaceClick = {}
+        )
+    }
+}
+

@@ -1,5 +1,8 @@
 package com.example.travira.screens.profile
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -265,3 +268,18 @@ private fun ReviewCard(
         }
     }
 }
+
+
+@Preview(showBackground = true, name = "My Reviews", showSystemUi = true)
+@Composable
+private fun ReviewsScreenPreview() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    TraviraTheme {
+        ReviewsScreen(
+            tokenManager = com.example.travira.auth.TokenManager(context),
+            onBack = {},
+            onPlaceClick = {}
+        )
+    }
+}
+

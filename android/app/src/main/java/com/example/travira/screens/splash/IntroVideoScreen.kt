@@ -1,5 +1,8 @@
 package com.example.travira.screens.splash
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -125,3 +128,18 @@ fun IntroVideoScreen(
 //        )
     }
 }
+
+
+@Preview(showBackground = true, name = "Intro Video", showSystemUi = true)
+@Composable
+private fun IntroVideoScreenPreview() {
+    TraviraTheme {
+        // Preview shows black placeholder (video asset may be missing in design view)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        )
+    }
+}
+

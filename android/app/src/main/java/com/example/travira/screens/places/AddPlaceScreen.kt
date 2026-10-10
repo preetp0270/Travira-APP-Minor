@@ -1,5 +1,8 @@
 package com.example.travira.screens.places
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travira.ui.theme.TraviraTheme
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -397,3 +400,18 @@ private fun Field(
         singleLine = label != "Full description"
     )
 }
+
+
+@Preview(showBackground = true, name = "Add Place", showSystemUi = true)
+@Composable
+private fun AddPlaceScreenPreview() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    TraviraTheme {
+        AddPlaceScreen(
+            tokenManager = com.example.travira.auth.TokenManager(context),
+            onBack = {},
+            onSubmitted = {}
+        )
+    }
+}
+
