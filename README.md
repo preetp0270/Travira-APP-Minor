@@ -39,7 +39,7 @@ These pages are served from the backend (`backend/public/`) on the same host as 
 * **Reviews & ratings** — Rate 1–5 with optional feedback; counts use **sample base + real reviews**  
 * **Wishlist** — Save places for later  
 * **AI travel chatbot** — Gemini (travel tips, culture, itinerary ideas)  
-* **Profile** — Edit profile, notifications, visited list, contributions  
+* **Profile** — Edit profile, visited list, contributions  
 * **Admin (in-app)** — Dashboard for admins  
 
 ### Web (browser)
@@ -76,7 +76,7 @@ These pages are served from the backend (`backend/public/`) on the same host as 
 1. **Splash / intro** → Login or Register  
 2. **Home / Places** → Browse list from `GET /api/place`  
 3. **Place detail** → Wishlist, **Mark visited**, **Rate**  
-4. **Profile** → Wishlist, Visited, Notifications, Edit profile  
+4. **Profile** → Wishlist, Visited, Edit profile  
 5. **AI Chat** → `POST /api/chat` (auth required)  
 6. **Forgot password** → email link → `/reset-password.html?token=…`  
 
@@ -139,7 +139,7 @@ Password reset    →  POST /api/users/forgot-password
 | Area | Base path | Notes |
 |------|-----------|--------|
 | Places | `/api/place` or `/api/places` | List, detail, wishlist, rating |
-| Users | `/api/users` | Auth, profile, visited, notifications |
+| Users | `/api/users` | Auth, profile, visited |
 | Admin | `/api/admin` | Places & users (JWT + admin) |
 | Admin bootstrap | `/api/admin-bootstrap/register` | Public; gated by MongoDB password |
 | Chat | `/api/chat` | Gemini travel chatbot (auth) |

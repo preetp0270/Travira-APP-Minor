@@ -1,5 +1,5 @@
 /**
- * User model — accounts, wishlist, visited places, notifications, auth tokens.
+ * User model — accounts, wishlist, visited places, auth tokens.
  *
  * Roles: "user" | "admin"
  * tokenVersion is bumped on password reset so old JWTs fail everywhere.
@@ -38,18 +38,6 @@ const userSchema = new mongoose.Schema({
   bio: {
     type: String,
     default: ""
-  },
-
-  /** Prefer email alerts (in-app still stored when inAppNotifications is true) */
-  emailNotifications: {
-    type: Boolean,
-    default: true
-  },
-
-  /** In-app notification preference */
-  inAppNotifications: {
-    type: Boolean,
-    default: true
   },
 
   resetPasswordToken: {
@@ -92,27 +80,6 @@ const userSchema = new mongoose.Schema({
         ref: "Place"
       },
       visitedAt: {
-        type: Date,
-        default: Date.now
-      }
-    }
-  ],
-
-  notifications: [
-    {
-      title: {
-        type: String,
-        required: true
-      },
-      message: {
-        type: String,
-        required: true
-      },
-      read: {
-        type: Boolean,
-        default: false
-      },
-      createdAt: {
         type: Date,
         default: Date.now
       }

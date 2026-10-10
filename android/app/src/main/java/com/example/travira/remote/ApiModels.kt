@@ -1,6 +1,5 @@
 package com.example.travira.remote
 
-import com.example.travira.model.NotificationItem
 import com.example.travira.model.Place
 import com.example.travira.model.User
 
@@ -100,9 +99,7 @@ data class UpdateProfileRequest(
     val name: String? = null,
     val phone: String? = null,
     val location: String? = null,
-    val bio: String? = null,
-    val emailNotifications: Boolean? = null,
-    val inAppNotifications: Boolean? = null
+    val bio: String? = null
 )
 
 data class ForgotPasswordRequest(
@@ -113,10 +110,6 @@ data class ResetPasswordRequest(
     val token: String,
     val password: String,
     val confirmPassword: String
-)
-
-data class MarkNotificationsReadRequest(
-    val ids: List<String>? = null
 )
 
 data class AdminUpdateUserRequest(
@@ -180,12 +173,6 @@ data class RatePlaceResponse(
     val averageRating: Double = 0.0,
     val ratingsCount: Int = 0,
     val visitorsCount: Int = 0
-)
-
-data class NotificationsResponse(
-    val success: Boolean = false,
-    val notifications: List<NotificationItem> = emptyList(),
-    val message: String? = null
 )
 
 // ── Admin DTOs ──────────────────────────────────────

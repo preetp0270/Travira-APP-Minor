@@ -29,7 +29,6 @@ import com.example.travira.model.User
 import com.example.travira.remote.ApiErrorHelper
 import com.example.travira.remote.RefreshRequest
 import com.example.travira.remote.RetrofitInstance
-import com.example.travira.remote.ServerKeepAlive
 import com.example.travira.screens.ai.AIChatScreen
 import com.example.travira.screens.auth.ForgotPasswordScreen
 import com.example.travira.screens.auth.LoginScreen
@@ -62,9 +61,6 @@ class MainActivity : ComponentActivity() {
                             or View.SYSTEM_UI_FLAG_FULLSCREEN
                     )
 
-        // Keep Render awake with periodic async /api/ping while app process lives
-        ServerKeepAlive.start()
-
         setContent {
             val tokenManager = remember { TokenManager(this) }
             var themeMode by remember { mutableStateOf(tokenManager.themeMode) }
@@ -86,10 +82,6 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        // Only stop if Activity is finishing for good (not config change)
-        if (isFinishing) {
-            ServerKeepAlive.stop()
-        }
         super.onDestroy()
     }
 }

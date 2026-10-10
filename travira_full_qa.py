@@ -204,14 +204,6 @@ def section_user_features(token: str, place_id: Optional[str]) -> None:
         json_body={"location": "Surat, Gujarat", "bio": "QA full suite bio"},
         name="PUT /api/users/profile",
     )
-    api("GET", "/api/users/notifications", token=token, name="GET /api/users/notifications")
-    api(
-        "PUT",
-        "/api/users/notifications/read",
-        token=token,
-        json_body={},
-        name="PUT /api/users/notifications/read",
-    )
     api("GET", "/api/users/visited", token=token, name="GET /api/users/visited")
     api("GET", "/api/place/user/wishlist", token=token, name="GET wishlist")
     api("GET", "/api/place/user/my-places", token=token, name="GET my-places")
@@ -682,7 +674,6 @@ def section_browserstack_ui(
         pause(2, "Profile section")
         tap_text("Profile", "Profile tab", 4) or tap_desc("Profile", "Profile tab", 4)
         swipe_up()
-        tap_text("Notification", "Notifications", 3)
         try:
             driver.back()
             pause(1.5)

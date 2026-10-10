@@ -1,7 +1,7 @@
 /**
  * User routes — mounted at /api/users
  * Public: register, login, refresh, forgot/reset password
- * Protected (authMiddleware): profile, notifications, visited, logout
+ * Protected (authMiddleware): profile, visited, logout
  */
 const express = require("express");
 const router = express.Router();
@@ -15,8 +15,6 @@ const {
   refreshToken,
   logout,
   logoutAll,
-  getNotifications,
-  markNotificationsRead,
   getVisitedPlaces,
   addVisitedPlace,
   removeVisitedPlace,
@@ -36,9 +34,6 @@ router.post("/reset-password", resetPassword);
 router.get("/profile", authMiddleware, profile);
 router.put("/profile", authMiddleware, updateProfile);
 router.get("/me", authMiddleware, getCurrentUser);
-
-router.get("/notifications", authMiddleware, getNotifications);
-router.put("/notifications/read", authMiddleware, markNotificationsRead);
 
 router.get("/visited", authMiddleware, getVisitedPlaces);
 router.post("/visited/:id", authMiddleware, addVisitedPlace);

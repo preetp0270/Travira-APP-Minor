@@ -221,9 +221,9 @@ exports.adminAddPlace = async (req, res) => {
 /** GET /api/admin/users */
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find({ role: { $in: ["user", "admin", "superadmin"] } })
+    const users = await User.find({ role: { $in: ["user", "admin"] } })
       .select(
-        "-password -refreshTokens -wishlist -addedPlaces -visitedPlaces -notifications"
+        "-password -refreshTokens -wishlist -addedPlaces -visitedPlaces"
       )
       .sort({ createdAt: -1 });
     res.json({ success: true, users });

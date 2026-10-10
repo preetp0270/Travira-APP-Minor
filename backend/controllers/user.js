@@ -1,6 +1,6 @@
 /**
  * User controller — register, login, profile, password reset,
- * wishlist/visited helpers, notifications, logout.
+ * wishlist/visited helpers, logout.
  */
 const crypto = require("crypto");
 const User = require("../models/user");
@@ -39,21 +39,6 @@ const generateRefreshToken = (user) => {
   );
 };
 
-/** Prepend an in-app notification (respects inAppNotifications preference) */
-function pushInApp(user, title, message) {
-  if (user.inAppNotifications === false) return;
-  user.notifications = user.notifications || [];
-  user.notifications.unshift({
-    title,
-    message,
-    read: false,
-    createdAt: new Date()
-  });
-  // Keep last 50
-  if (user.notifications.length > 50) {
-    user.notifications = user.notifications.slice(0, 50);
-  }
-}
 
 // ── Register ─────────────────────────────────────────
 
@@ -90,12 +75,6 @@ exports.register = async (req, res) => {
       password: hashedPassword
     });
 
-    pushInApp(
-      user,
-      "Welcome to Travira",
-      "Your account was created successfully. Explore places and try Travira AI."
-    );
-    await user.save();
 
     res.json({
       success: true,
@@ -143,10 +122,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Legacy: normalize old superadmin role → admin
-    if (user.role === "superadmin") {
-      user.role = "admin";
-    }
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
@@ -158,12 +133,6 @@ exports.login = async (req, res) => {
       user.refreshTokens = user.refreshTokens.slice(-10);
     }
 
-    const when = new Date().toUTCString();
-    pushInApp(
-      user,
-      "New login",
-      `You signed in on ${when}. If this wasn't you, reset your password.`
-    );
     await user.save();
 
     res.json({
@@ -226,14 +195,6 @@ exports.forgotPassword = async (req, res) => {
       text: `Reset your Travira password: ${link}`
     });
 
-    pushInApp(
-      user,
-      "Password reset requested",
-      mailResult.sent
-        ? "A password reset link was sent to your email (valid 1 hour)."
-        : "Password reset requested. If email delivery failed, try again later or contact support."
-    );
-    await user.save();
 
     res.json({
       success: true,
@@ -289,11 +250,6 @@ exports.resetPassword = async (req, res) => {
     // Log out all devices
     user.refreshTokens = [];
     user.tokenVersion = (user.tokenVersion || 0) + 1;
-    pushInApp(
-      user,
-      "Password changed",
-      "Your password was updated. You were signed out on all other devices."
-    );
     await user.save();
 
     res.json({
@@ -415,9 +371,7 @@ exports.updateProfile = async (req, res) => {
       "name",
       "phone",
       "location",
-      "bio",
-      "emailNotifications",
-      "inAppNotifications"
+      "bio"
     ];
     const updates = {};
     for (const key of allowed) {
@@ -435,48 +389,6 @@ exports.updateProfile = async (req, res) => {
     }
 
     res.json({ success: true, message: "Profile updated", user });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// ── Notifications ────────────────────────────────────
-
-/** GET /api/users/notifications */
-exports.getNotifications = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select("notifications");
-    res.json({ success: true, notifications: user?.notifications || [] });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-/** PUT /api/users/notifications/read — body: { ids?: string[] } */
-exports.markNotificationsRead = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    const { ids } = req.body || {};
-    if (Array.isArray(ids) && ids.length > 0) {
-      user.notifications.forEach((n) => {
-        if (ids.includes(n._id.toString())) n.read = true;
-      });
-    } else {
-      user.notifications.forEach((n) => {
-        n.read = true;
-      });
-    }
-    await user.save();
-
-    res.json({
-      success: true,
-      message: "Notifications marked as read",
-      notifications: user.notifications
-    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

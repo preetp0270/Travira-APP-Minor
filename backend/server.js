@@ -2,7 +2,7 @@
  * Travira backend entry point.
  * Routes:
  *   /api/place, /api/places  → places feed, wishlist, ratings
- *   /api/users               → auth, profile, visited, notifications
+ *   /api/users               → auth, profile, visited
  *   /api/admin               → admin places & users
  *   /api/chat                → Gemini travel chatbot
  */
@@ -37,6 +37,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/", (req, res) => res.send("🚀 Travira Backend is Running..."));
+// Lightweight ping for external uptime monitors (UptimeRobot, cron-job.org, etc.)
 app.get("/api/ping", (req, res) => res.json({ success: true, pong: true }));
 
 // Password reset (also mounted here so they never 404 if the router is stale)
@@ -81,25 +82,32 @@ const startServer = async () => {
     await connectDB();
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🚀 Server running on port ${PORT}`);
 
-  const url = process.env.RENDER_EXTERNAL_URL || process.env.APP_BASE_URL;
-  if (!url) {
-    console.warn("⚠️  Keep-alive skipped: set APP_BASE_URL");
-    return;
-  }
+      // Self-ping keep-alive: hits /api/ping every 9 minutes so the
+      // process stays active longer on Render (helps during demos/submission).
+      // Set APP_BASE_URL or RENDER_EXTERNAL_URL in Render Environment, e.g.
+      //   APP_BASE_URL=https://travira-app-minor.onrender.com
+      const url = process.env.RENDER_EXTERNAL_URL || process.env.APP_BASE_URL;
+      if (!url) {
+        console.warn("⚠️  Keep-alive skipped: set APP_BASE_URL (or RENDER_EXTERNAL_URL)");
+        return;
+      }
 
-  const pingUrl = `${url.replace(/\/$/, "")}/api/ping`;
+      const pingUrl = `${url.replace(/\/$/, "")}/api/ping`;
+      console.log(`🔄 Keep-alive started → ${pingUrl} every 9 min`);
 
-  setInterval(async () => {
-    try {
-      const res = await fetch(pingUrl);
-      console.log(`✅ Server is running (ping ${res.status}) at ${new Date().toLocaleTimeString()}`);
-    } catch (e) {
-      console.warn(`❌ Keep-alive failed: ${e.message}`);
-    }
-  }, 9 * 60 * 1000); // every 9 minutes
-});
+      setInterval(async () => {
+        try {
+          const res = await fetch(pingUrl);
+          console.log(
+            `✅ Keep-alive ok (ping ${res.status}) at ${new Date().toLocaleTimeString()}`
+          );
+        } catch (e) {
+          console.warn(`❌ Keep-alive failed: ${e.message}`);
+        }
+      }, 9 * 60 * 1000);
+    });
   } catch (error) {
     console.error("❌ Failed to start server:", error.message);
     process.exit(1);

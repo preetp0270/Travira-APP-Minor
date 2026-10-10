@@ -10,7 +10,7 @@ import retrofit2.http.Path
 
 /**
  * Auth and user profile API under api/users.
- * Covers login, register, password reset, profile, visited, notifications.
+ * Covers login, register, password reset, profile, visited.
  */
 interface AuthApi {
 
@@ -51,17 +51,6 @@ interface AuthApi {
         @Header("Authorization") bearer: String,
         @Body body: UpdateProfileRequest
     ): UserProfileResponse
-
-    @GET("api/users/notifications")
-    suspend fun getNotifications(
-        @Header("Authorization") bearer: String
-    ): NotificationsResponse
-
-    @PUT("api/users/notifications/read")
-    suspend fun markNotificationsRead(
-        @Header("Authorization") bearer: String,
-        @Body body: MarkNotificationsReadRequest = MarkNotificationsReadRequest()
-    ): NotificationsResponse
 
     @GET("api/users/visited")
     suspend fun getVisitedPlaces(
