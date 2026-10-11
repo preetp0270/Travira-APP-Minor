@@ -79,9 +79,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-    }
 }
 
 /** What the user was trying to do before being sent to login */
@@ -343,7 +340,6 @@ fun TraviraApp(
                         } else sp
                     }
                 },
-                currentUserId = currentUser?.userId ?: tokenManager.userId
             )
         }
 

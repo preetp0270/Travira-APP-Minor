@@ -75,7 +75,6 @@ exports.register = async (req, res) => {
       password: hashedPassword
     });
 
-
     res.json({
       success: true,
       message: "Registration successful",
@@ -121,7 +120,6 @@ exports.login = async (req, res) => {
         message: "Invalid email or password"
       });
     }
-
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
@@ -194,7 +192,6 @@ exports.forgotPassword = async (req, res) => {
       html: resetPasswordHtml(user.name, link),
       text: `Reset your Travira password: ${link}`
     });
-
 
     res.json({
       success: true,
