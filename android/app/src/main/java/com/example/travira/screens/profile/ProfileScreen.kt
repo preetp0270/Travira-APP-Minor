@@ -1,100 +1,31 @@
 package com.example.travira.screens.profile
 
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.RateReview
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.TravelExplore
-import androidx.compose.material.icons.filled.Verified
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.travira.auth.TokenManager
-import com.example.travira.model.User
-import com.example.travira.remote.RetrofitInstance
-import com.example.travira.ui.theme.TraviraBlue
-import com.example.travira.ui.theme.TraviraBlueDark
-import com.example.travira.ui.theme.TraviraBlueLight
-import com.example.travira.ui.theme.TraviraBg
-import com.example.travira.ui.theme.TraviraError
-import com.example.travira.ui.theme.TraviraHeart
-import com.example.travira.ui.theme.TraviraHeartBg
-import com.example.travira.ui.theme.TraviraIce
-import com.example.travira.ui.theme.TraviraMutedIcon
-import com.example.travira.ui.theme.TraviraOutline
-import com.example.travira.ui.theme.TraviraSecondaryBright
-import com.example.travira.ui.theme.TraviraSky
-import com.example.travira.ui.theme.TraviraStar
-import com.example.travira.ui.theme.TraviraStarBg
-import com.example.travira.ui.theme.TraviraSuccess
-import com.example.travira.ui.theme.TraviraSuccessBg
-import com.example.travira.ui.theme.TraviraSurfaceLow
-import com.example.travira.ui.theme.TraviraTextPrimary
-import com.example.travira.ui.theme.TraviraTextSecondary
-import com.example.travira.ui.theme.TraviraTextTertiary
-import com.example.travira.ui.theme.TraviraWhite
-import com.example.travira.ui.theme.TraviraBrandFont
-import com.example.travira.ui.theme.TraviraTheme
-import androidx.compose.ui.tooling.preview.Preview
+import android.content.*
+import android.net.*
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.*
+import androidx.compose.material.icons.*
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.vector.*
+import androidx.compose.ui.layout.*
+import androidx.compose.ui.platform.*
+import androidx.compose.ui.res.*
+import androidx.compose.ui.text.font.*
+import androidx.compose.ui.text.style.*
+import androidx.compose.ui.tooling.preview.*
+import androidx.compose.ui.unit.*
+import com.example.travira.R
+import com.example.travira.auth.*
+import com.example.travira.model.*
+import com.example.travira.remote.*
+import com.example.travira.ui.theme.*
 
 enum class ProfileSection {
     WISHLIST, VISITED, REVIEWS
@@ -239,7 +170,7 @@ fun ProfileScreen(
 
             )
 
-            // Hero profile card — reduced gap below the title
+            // Hero profile card — travel banner + avatar + info
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -255,23 +186,31 @@ fun ProfileScreen(
                     .background(cardBg)
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 12.dp,
-                            bottom = 12.dp
-                        ),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Avatar with ring
-                    Box(contentAlignment = Alignment.BottomEnd) {
+                    // TRAVEL landmarks cover banner
+                    Image(
+                        painter = painterResource(R.drawable.img),
+                        contentDescription = "Travel cover",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Avatar: travel illustration (replaces person icon)
+                    Box(
+                        modifier = Modifier
+                            .offset(y = (-34).dp)
+                            .padding(bottom = 0.dp),
+                        contentAlignment = Alignment.BottomEnd
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(68.dp)
+                                .size(72.dp)
                                 .border(
-                                    width = 2.5.dp,
+                                    width = 3.dp,
                                     brush = Brush.linearGradient(
                                         listOf(
                                             TraviraBlue,
@@ -283,14 +222,14 @@ fun ProfileScreen(
                                 )
                                 .padding(3.dp)
                                 .clip(CircleShape)
-                                .background(TraviraIce),
+                                .border(3.dp, cardBg, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = null,
-                                tint = TraviraBlue,
-                                modifier = Modifier.size(34.dp)
+                            Image(
+                                painter = painterResource(R.drawable.back),
+                                contentDescription = "Profile avatar",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
                         }
 
@@ -313,98 +252,109 @@ fun ProfileScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(10.dp))
-
-                    Text(
-                        text = displayName,
-                        fontFamily = FontFamily.Serif,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = textPrimary
-                    )
-
-                    if (email.isNotBlank()) {
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = email,
-                            fontSize = 12.sp,
-                            color = textSecondary
-                        )
-                    }
-
-                    val roleLabel = when {
-                        !isLoggedIn -> "Guest"
-                        isAdmin -> "Admin"
-                        else -> "User"
-                    }
-
-                    Spacer(Modifier.height(4.dp))
-
-                    Text(
-                        text = roleLabel,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isAdmin) TraviraBlue else textSecondary
-                    )
-
-                    Spacer(Modifier.height(4.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Explore,
-                            contentDescription = null,
-                            tint = TraviraBlue,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = if (isLoggedIn) {
-                                "Travel Explorer • Level $level"
-                            } else {
-                                "Guest explorer"
-                            },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TraviraSecondaryBright
-                        )
-                    }
-
-                    Spacer(Modifier.height(6.dp))
-
-                    Text(
-                        text = bio,
-                        fontSize = 12.sp,
-                        color = textSecondary,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 16.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    if (!isLoggedIn) {
-                        Spacer(Modifier.height(16.dp))
-
-                        Button(
-                            onClick = onLoginClick,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = TraviraBlue
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = (-22).dp)
+                            .padding(
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = 12.dp
                             ),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                        ) {
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+
+                        Text(
+                            text = displayName,
+                            fontFamily = FontFamily.Serif,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            color = textPrimary
+                        )
+
+                        if (email.isNotBlank()) {
+                            Spacer(Modifier.height(2.dp))
                             Text(
-                                "Login / Sign up",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp
+                                text = email,
+                                fontSize = 12.sp,
+                                color = textSecondary
                             )
                         }
-                    }
-                }
-            }
+
+                        val roleLabel = when {
+                            !isLoggedIn -> "Guest"
+                            isAdmin -> "Admin"
+                            else -> "User"
+                        }
+
+                        Spacer(Modifier.height(4.dp))
+
+                        Text(
+                            text = roleLabel,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isAdmin) TraviraBlue else textSecondary
+                        )
+
+                        Spacer(Modifier.height(4.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Explore,
+                                contentDescription = null,
+                                tint = TraviraBlue,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = if (isLoggedIn) {
+                                    "Travel Explorer • Level $level"
+                                } else {
+                                    "Guest explorer"
+                                },
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TraviraSecondaryBright
+                            )
+                        }
+
+                        Spacer(Modifier.height(6.dp))
+
+                        Text(
+                            text = bio,
+                            fontSize = 12.sp,
+                            color = textSecondary,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 16.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        if (!isLoggedIn) {
+                            Spacer(Modifier.height(16.dp))
+
+                            Button(
+                                onClick = onLoginClick,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = TraviraBlue
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                            ) {
+                                Text(
+                                    "Login / Sign up",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 15.sp
+                                )
+                            }
+                        }
+                    } // end profile info column
+                } // end hero card column
+            } // end hero card box
 
             Spacer(Modifier.height(12.dp))
 

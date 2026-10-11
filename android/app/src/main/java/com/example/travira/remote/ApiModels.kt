@@ -1,7 +1,6 @@
 package com.example.travira.remote
 
-import com.example.travira.model.Place
-import com.example.travira.model.User
+import com.example.travira.model.*
 
 // ── Places ──────────────────────────────────────────
 

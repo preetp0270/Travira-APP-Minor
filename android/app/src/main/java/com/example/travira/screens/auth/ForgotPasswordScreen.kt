@@ -1,56 +1,28 @@
 package com.example.travira.screens.auth
 
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.travira.ui.theme.TraviraTheme
-
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
-import com.example.travira.remote.ApiErrorHelper
-import com.example.travira.remote.ForgotPasswordRequest
-import com.example.travira.remote.RetrofitInstance
-import kotlinx.coroutines.launch
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.text.*
+import androidx.compose.material.icons.*
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.layout.*
+import androidx.compose.ui.res.*
+import androidx.compose.ui.text.font.*
+import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.style.*
+import androidx.compose.ui.tooling.preview.*
+import androidx.compose.ui.unit.*
+import com.example.travira.R
+import com.example.travira.remote.*
+import com.example.travira.ui.theme.*
+import kotlinx.coroutines.*
 
 /**
  * Request a password-reset email. User opens the secure web form from the link
@@ -82,14 +54,20 @@ fun ForgotPasswordScreen(
     )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF0B1D2A), Color(0xFF0D47A1), Color(0xFF1565C0))
-                )
-            )
+        modifier = modifier.fillMaxSize()
     ) {
+        Image(
+            painter = painterResource(R.drawable.background),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White.copy(alpha = 0.22f))
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -99,16 +77,24 @@ fun ForgotPasswordScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
+                text = "Travira",
+                fontFamily = TraviraBrandFont,
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Normal,
+                color = Color(0xFF0D47A1)
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
                 "Forgot password",
-                fontSize = 28.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = Color(0xFF0D1B2A)
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 "We’ll email you a secure link. Open it in your browser to set a new password.",
                 fontSize = 14.sp,
-                color = Color.White.copy(alpha = 0.88f),
+                color = Color(0xFF546E7A),
                 textAlign = TextAlign.Center
             )
 
@@ -118,9 +104,9 @@ fun ForgotPasswordScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White.copy(alpha = 0.18f))
+                    .background(Color.White.copy(alpha = 0.82f))
                     .border(
-                        BorderStroke(1.2.dp, Color.White.copy(alpha = 0.45f)),
+                        BorderStroke(1.2.dp, Color.White.copy(alpha = 0.9f)),
                         RoundedCornerShape(28.dp)
                     )
                     .padding(20.dp)
@@ -140,11 +126,11 @@ fun ForgotPasswordScreen(
 
                 if (error != null) {
                     Spacer(Modifier.height(12.dp))
-                    Text(error!!, color = Color(0xFFFFCDD2), fontSize = 13.sp)
+                    Text(error!!, color = Color(0xFFC62828), fontSize = 13.sp)
                 }
                 if (success != null) {
                     Spacer(Modifier.height(12.dp))
-                    Text(success!!, color = Color(0xFFC8E6C9), fontSize = 13.sp)
+                    Text(success!!, color = Color(0xFF2E7D32), fontSize = 13.sp)
                 }
             }
 
@@ -163,7 +149,7 @@ fun ForgotPasswordScreen(
                         scope.launch {
                             try {
                                 val reqBody = ForgotPasswordRequest(email.trim())
-                                val res = try {
+                                try {
                                     RetrofitInstance.authApi.forgotPassword(reqBody)
                                 } catch (first: Exception) {
                                     try {
@@ -227,7 +213,7 @@ fun ForgotPasswordScreen(
             Text(
                 "The email link opens a secure web form. Password change signs you out everywhere for safety.",
                 fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.7f),
+                color = Color(0xFF546E7A),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 12.dp)
             )
@@ -240,9 +226,10 @@ fun ForgotPasswordScreen(
                 .align(Alignment.TopStart)
                 .zIndex(1f)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.15f))
+                .background(Color.White.copy(alpha = 0.85f))
+                .border(1.dp, Color(0xFFB0BEC5).copy(alpha = 0.5f), CircleShape)
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color(0xFF0D47A1))
         }
     }
 }

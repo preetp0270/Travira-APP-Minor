@@ -1,6 +1,6 @@
 package com.example.travira.ui.theme
 
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.*
 
 // Travira brand — Azure Horizon (Stitch design system)
 val TraviraBlue = Color(0xFF1565C0)           // primary-container / core CTA

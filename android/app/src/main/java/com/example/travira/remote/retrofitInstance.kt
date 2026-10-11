@@ -1,17 +1,14 @@
 package com.example.travira.remote
 
-import com.example.travira.model.Place
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonDeserializationContext
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonElement
-import com.google.gson.reflect.TypeToken
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import java.lang.reflect.Type
-import java.util.concurrent.TimeUnit
+import com.example.travira.model.*
+import com.google.gson.*
+import com.google.gson.reflect.*
+import java.lang.reflect.*
+import java.util.concurrent.*
+import okhttp3.*
+import okhttp3.logging.*
+import retrofit2.*
+import retrofit2.converter.gson.*
 
 /**
  * Accepts an array of place objects OR raw ObjectId strings (unpopulated refs).

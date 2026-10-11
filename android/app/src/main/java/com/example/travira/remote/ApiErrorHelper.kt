@@ -1,10 +1,9 @@
 package com.example.travira.remote
 
-import org.json.JSONObject
-import retrofit2.HttpException
-import java.io.IOException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
+import java.io.*
+import java.net.*
+import org.json.*
+import retrofit2.*
 
 /**
  * Turns Retrofit / network failures into short, user-friendly messages

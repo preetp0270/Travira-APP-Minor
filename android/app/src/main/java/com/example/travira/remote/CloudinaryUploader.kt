@@ -1,19 +1,15 @@
 package com.example.travira.remote
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.net.Uri
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import android.content.*
+import android.graphics.*
+import android.net.*
+import java.io.*
+import java.util.concurrent.*
+import kotlinx.coroutines.*
+import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
-import java.io.ByteArrayOutputStream
-import java.util.concurrent.TimeUnit
+import org.json.*
 
 /**
  * Uploads an image to Cloudinary (unsigned preset) and returns the secure URL.

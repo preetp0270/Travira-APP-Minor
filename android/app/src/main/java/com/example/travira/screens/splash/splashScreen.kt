@@ -1,26 +1,19 @@
 package com.example.travira.screens.splash
 
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.travira.ui.theme.TraviraTheme
-
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.layout.*
+import androidx.compose.ui.res.*
+import androidx.compose.ui.text.font.*
+import androidx.compose.ui.tooling.preview.*
+import androidx.compose.ui.unit.*
+import com.example.travira.R
+import com.example.travira.ui.theme.*
+import kotlinx.coroutines.*
 
 /**
  * Simple branded splash (no ExoPlayer required).
@@ -42,21 +35,26 @@ fun SplashScreen(
 private fun SplashScreenPreview() {
     TraviraTheme {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    //image set
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF0B1D2A), Color(0xFF1565C0))
-                    )
-                ),
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
+            Image(
+                painter = painterResource(R.drawable.background),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = 0.22f))
+            )
             Text(
                 text = "Travira",
-                color = Color.White,
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Bold
+                fontFamily = TraviraBrandFont,
+                color = Color(0xFF0D47A1),
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Normal
             )
         }
     }

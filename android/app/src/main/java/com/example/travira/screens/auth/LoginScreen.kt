@@ -1,71 +1,34 @@
 package com.example.travira.screens.auth
 
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.travira.ui.theme.TraviraTheme
-import android.content.Intent
-import android.net.Uri
-import android.util.Log
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.TravelExplore
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
-import com.example.travira.auth.TokenManager
-import com.example.travira.remote.ApiErrorHelper
-import com.example.travira.remote.LoginRequest
-import com.example.travira.remote.RegisterRequest
-import com.example.travira.remote.RetrofitInstance
-import kotlinx.coroutines.launch
+import android.content.*
+import android.net.*
+import android.util.*
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.text.*
+import androidx.compose.material.icons.*
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.layout.*
+import androidx.compose.ui.platform.*
+import androidx.compose.ui.res.*
+import androidx.compose.ui.text.font.*
+import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.style.*
+import androidx.compose.ui.tooling.preview.*
+import androidx.compose.ui.unit.*
+import com.example.travira.*
+import com.example.travira.R
+import com.example.travira.auth.*
+import com.example.travira.remote.*
+import com.example.travira.ui.theme.*
+import kotlinx.coroutines.*
 
 private const val ADMIN_REGISTER_URL =
     "https://travira-app-minor.onrender.com/admin-register.html"
@@ -106,35 +69,20 @@ fun LoginScreen(
     )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF0B1D2A),
-                        Color(0xFF0D47A1),
-                        Color(0xFF1565C0),
-                        Color(0xFF42A5F5)
-                    )
-                )
-            )
+        modifier = modifier.fillMaxSize()
     ) {
-        // Soft glow orbs for depth (use offset — negative padding can crash some Compose builds)
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 40.dp)
-                .size(180.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF90CAF9).copy(alpha = 0.25f))
+        // World wonders wallpaper background (login + register)
+        Image(
+            painter = painterResource(R.drawable.background),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
         )
+        // Soft light scrim so form content stays readable over the illustration
         Box(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(bottom = 80.dp)
-                .size(220.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.12f))
+                .fillMaxSize()
+                .background(Color.White.copy(alpha = 0.22f))
         )
 
         Column(
@@ -155,7 +103,7 @@ fun LoginScreen(
                             listOf(Color.White.copy(alpha = 0.95f), Color(0xFFE3F2FD))
                         )
                     )
-                    .border(1.5.dp, Color.White.copy(alpha = 0.8f), CircleShape),
+                    .border(1.5.dp, Color.White.copy(alpha = 0.9f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -169,16 +117,17 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Travira",
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                letterSpacing = 1.sp
+                fontFamily = TraviraBrandFont,
+                fontSize = 42.sp,
+                fontWeight = FontWeight.Normal,
+                color = Color(0xFF0D47A1),
+                letterSpacing = 0.5.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = if (isRegister) "Create your account" else "Welcome back, explorer",
                 fontSize = 15.sp,
-                color = Color.White.copy(alpha = 0.88f)
+                color = Color(0xFF37474F)
             )
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -189,9 +138,9 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .shadow(16.dp, RoundedCornerShape(28.dp))
                     .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White.copy(alpha = 0.18f))
+                    .background(Color.White.copy(alpha = 0.82f))
                     .border(
-                        BorderStroke(1.2.dp, Color.White.copy(alpha = 0.45f)),
+                        BorderStroke(1.2.dp, Color.White.copy(alpha = 0.9f)),
                         RoundedCornerShape(28.dp)
                     )
                     .padding(20.dp)
@@ -274,13 +223,13 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = error!!,
-                        color = Color(0xFFFFCDD2),
+                        color = Color(0xFFB71C1C),
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFFB71C1C).copy(alpha = 0.45f))
+                            .background(Color(0xFFFFEBEE))
                             .padding(10.dp)
                     )
                 }
@@ -385,7 +334,7 @@ fun LoginScreen(
                 TextButton(onClick = onForgotPassword) {
                     Text(
                         text = "Forgot password?",
-                        color = Color.White.copy(alpha = 0.95f),
+                        color = Color(0xFF1565C0),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -399,7 +348,7 @@ fun LoginScreen(
                 Text(
                     text = if (isRegister) "Already have an account? Sign in"
                     else "New here? Create account",
-                    color = Color.White.copy(alpha = 0.95f),
+                    color = Color(0xFF1565C0),
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -408,7 +357,7 @@ fun LoginScreen(
             Text(
                 text = "Browse as a guest anytime.\nLogin unlocks wishlist, visited places & AI chat.",
                 fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.7f),
+                color = Color(0xFF546E7A),
                 textAlign = TextAlign.Center,
                 lineHeight = 17.sp
             )
@@ -432,7 +381,7 @@ fun LoginScreen(
             ) {
                 Text(
                     text = "Admin? Register here",
-                    color = Color.White.copy(alpha = 0.95f),
+                    color = Color(0xFF0D47A1),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     textDecoration = TextDecoration.Underline,
@@ -451,12 +400,13 @@ fun LoginScreen(
                 .align(Alignment.TopStart)
                 .zIndex(2f)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.15f))
+                .background(Color.White.copy(alpha = 0.85f))
+                .border(1.dp, Color(0xFFB0BEC5).copy(alpha = 0.5f), CircleShape)
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = Color.White
+                tint = Color(0xFF0D47A1)
             )
         }
     }

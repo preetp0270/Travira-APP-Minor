@@ -1,9 +1,7 @@
 package com.example.travira.ui.theme
 
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import com.example.travira.R
+import androidx.compose.ui.text.font.*
+import com.example.travira.*
 
 /**
  * Google Font **Poppins** (bundled under res/font — no API key / env needed).
