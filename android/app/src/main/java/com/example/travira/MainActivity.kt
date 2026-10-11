@@ -50,10 +50,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
         window.decorView.systemUiVisibility =
             (
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY

@@ -567,47 +567,47 @@ fun ProfileScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-            // Travel Activity section
-            SectionHeader(
-                title = "Travel Activity",
-                caption = "Journal",
-                textPrimary = textPrimary,
-                textTertiary = textTertiary
-            )
-            ProfileSectionCard(cardBg = cardBg, outline = outline) {
-                ProfileRow(
-                    icon = Icons.Default.Favorite,
-                    iconTint = TraviraHeart,
-                    iconBg = if (isDark) Color(0xFF3A1A28) else TraviraHeartBg,
-                    title = "My Wishlist",
-                    subtitle = if (wishlistCount > 0) "$wishlistCount saved places" else "Save places for later",
-                    textPrimary = textPrimary,
-                    textSecondary = textSecondary,
-                    onClick = { requireLoginThen(ProfileSection.WISHLIST) }
-                )
-                ThinDivider(outline)
-                ProfileRow(
-                    icon = Icons.Default.Place,
-                    iconTint = TraviraSuccess,
-                    iconBg = if (isDark) Color(0xFF1B3A2A) else TraviraSuccessBg,
-                    title = "Visited Destinations",
-                    subtitle = if (visitedCount > 0) "$visitedCount places explored" else "Mark places as visited",
-                    textPrimary = textPrimary,
-                    textSecondary = textSecondary,
-                    onClick = { requireLoginThen(ProfileSection.VISITED) }
-                )
-                ThinDivider(outline)
-                ProfileRow(
-                    icon = Icons.Default.RateReview,
-                    iconTint = TraviraStar,
-                    iconBg = if (isDark) Color(0xFF3A3010) else TraviraStarBg,
-                    title = "My Reviews",
-                    subtitle = if (reviewsCount > 0) "$reviewsCount review${if (reviewsCount == 1) "" else "s"}" else "Rate places to add reviews",
-                    textPrimary = textPrimary,
-                    textSecondary = textSecondary,
-                    onClick = { requireLoginThen(ProfileSection.REVIEWS) }
-                )
-            }
+//            // Travel Activity section
+//            SectionHeader(
+//                title = "Travel Activity",
+//                caption = "Journal",
+//                textPrimary = textPrimary,
+//                textTertiary = textTertiary
+//            )
+//            ProfileSectionCard(cardBg = cardBg, outline = outline) {
+////                ProfileRow(
+////                    icon = Icons.Default.Favorite,
+////                    iconTint = TraviraHeart,
+////                    iconBg = if (isDark) Color(0xFF3A1A28) else TraviraHeartBg,
+////                    title = "My Wishlist",
+////                    subtitle = if (wishlistCount > 0) "$wishlistCount saved places" else "Save places for later",
+////                    textPrimary = textPrimary,
+////                    textSecondary = textSecondary,
+////                    onClick = { requireLoginThen(ProfileSection.WISHLIST) }
+////                )
+//                ThinDivider(outline)
+//                ProfileRow(
+//                    icon = Icons.Default.Place,
+//                    iconTint = TraviraSuccess,
+//                    iconBg = if (isDark) Color(0xFF1B3A2A) else TraviraSuccessBg,
+//                    title = "Visited Destinations",
+//                    subtitle = if (visitedCount > 0) "$visitedCount places explored" else "Mark places as visited",
+//                    textPrimary = textPrimary,
+//                    textSecondary = textSecondary,
+//                    onClick = { requireLoginThen(ProfileSection.VISITED) }
+//                )
+//                ThinDivider(outline)
+//                ProfileRow(
+//                    icon = Icons.Default.RateReview,
+//                    iconTint = TraviraStar,
+//                    iconBg = if (isDark) Color(0xFF3A3010) else TraviraStarBg,
+//                    title = "My Reviews",
+//                    subtitle = if (reviewsCount > 0) "$reviewsCount review${if (reviewsCount == 1) "" else "s"}" else "Rate places to add reviews",
+//                    textPrimary = textPrimary,
+//                    textSecondary = textSecondary,
+//                    onClick = { requireLoginThen(ProfileSection.REVIEWS) }
+//                )
+//            }
 
             Spacer(Modifier.height(12.dp))
 
@@ -659,7 +659,7 @@ fun ProfileScreen(
                     textPrimary = textPrimary,
                     textSecondary = textSecondary,
                     onClick = {
-                        openUrl(context, "mailto:support@travira.app")
+                        openUrl(context, "mailto:preetcodework0270@gmail.com")
                     }
                 )
                 if (isLoggedIn) {
@@ -702,37 +702,37 @@ fun ProfileScreen(
                     icon = Icons.Default.Email,
                     tint = TraviraBlue,
                     bg = surfaceLow
-                ) { openUrl(context, "mailto:support@travira.app") }
+                ) { openUrl(context, "mailto:preetcodework0270@gmail.com") }
                 ContactIconButton(
                     label = "Call",
                     icon = Icons.Default.Call,
                     tint = TraviraSuccess,
                     bg = if (isDark) Color(0xFF1B3A2A) else TraviraSuccessBg
-                ) { openUrl(context, "tel:+911234567890") }
+                ) { openUrl(context, "tel:+917383215032") }
                 ContactIconButton(
                     label = "WhatsApp",
                     icon = Icons.Default.Favorite,
                     tint = Color(0xFF25D366),
                     bg = if (isDark) Color(0xFF1B3A2A) else Color(0xFFE8F5E9)
-                ) { openUrl(context, "https://wa.me/911234567890") }
+                ) { openUrl(context, "https://wa.me/917383215032") }
                 ContactIconButton(
                     label = "Insta",
                     icon = Icons.Default.TravelExplore,
                     tint = Color(0xFFE1306C),
                     bg = if (isDark) Color(0xFF3A1A28) else TraviraHeartBg
-                ) { openUrl(context, "https://instagram.com/travira") }
+                ) { openUrl(context, "https://instagram.com/impreet0270") }
                 ContactIconButton(
                     label = "GitHub",
                     icon = Icons.Default.Code,
                     tint = textPrimary,
                     bg = surfaceLow
-                ) { openUrl(context, "https://github.com/travira") }
+                ) { openUrl(context, "https://github.com/preetp0270/Travira-APP-Minor.git") }
                 ContactIconButton(
                     label = "Pinterest",
                     icon = Icons.Default.Star,
                     tint = Color(0xFFE60023),
                     bg = if (isDark) Color(0xFF3A1A1A) else Color(0xFFFFEBEE)
-                ) { openUrl(context, "https://pinterest.com/travira") }
+                ) { openUrl(context, "https://pinterest.com/PreetP_0270") }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -1034,10 +1034,10 @@ private fun ProfileScreenUserPreview() {
             isLoggedIn = true,
             user = User(
                 id = "1",
-                name = "Preet Patel",
-                email = "preetp0270@gmail.com",
+                name = "Travira",
+                email = "travira.app",
                 role = "user",
-                location = "Surat",
+                location = "...",
                 bio = "Explore smarter. Discover deeper. Travel with confidence."
             ),
             onLoginClick = {},
@@ -1054,10 +1054,10 @@ private fun ProfileScreenAdminPreview() {
             isLoggedIn = true,
             user = User(
                 id = "1",
-                name = "Preet Patel",
-                email = "preetp0270@gmail.com",
+                name = "Travira",
+                email = "Travira.app",
                 role = "admin",
-                location = "Surat"
+                location = "..."
             ),
             onLoginClick = {},
             onLogoutClick = {}

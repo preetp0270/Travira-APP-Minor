@@ -100,7 +100,7 @@ private val TopPillHorizontalPadding = 24.dp
  * Change this value manually to tune the gap — e.g. 28.dp, 36.dp, 44.dp.
  * File: screens/home/HomeScreen.kt → TopPillTopGap
  */
-private val TopPillTopGap = 20.dp
+private val TopPillTopGap = 40.dp
 private val TopPillShape = RoundedCornerShape(36.dp)
 /**
  * Clearance under the pill so list content does not sit under it.
@@ -268,12 +268,14 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(nestedScrollConnection)
-                ) {
+                        .padding(bottom = 20.dp)
+                )
+                {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
+                    )
+                    {
                         // Space so first cards sit below the floating top pill
                         item {
                             Spacer(

@@ -191,6 +191,8 @@ fun AIChatScreen(
             .statusBarsPadding()
             .imePadding()
             .padding(bottom = 108.dp)
+            .padding(top = 30.dp)
+
     ) {
         // Stitch header
         Row(

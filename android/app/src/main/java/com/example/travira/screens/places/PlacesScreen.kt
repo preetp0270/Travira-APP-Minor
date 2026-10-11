@@ -644,40 +644,40 @@ fun PlaceScreen(
                 }
 
                 // Owner / admin quick edit bar
-                if (canManage) {
-                    Spacer(Modifier.height(20.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Button(
-                            onClick = { onEditClick?.invoke(place) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37474F))
-                        ) {
-                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.size(6.dp))
-                            Text("Edit")
-                        }
-                        Button(
-                            onClick = { showDeleteConfirm = true },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.size(6.dp))
-                            Text("Delete")
-                        }
-                    }
-                }
+//                if (canManage) {
+//                    Spacer(Modifier.height(20.dp))
+//                    Row(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(horizontal = 16.dp),
+//                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+//                    ) {
+//                        Button(
+//                            onClick = { onEditClick?.invoke(place) },
+//                            modifier = Modifier
+//                                .weight(1f)
+//                                .height(48.dp),
+//                            shape = RoundedCornerShape(12.dp),
+//                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37474F))
+//                        ) {
+//                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+//                            Spacer(Modifier.size(6.dp))
+//                            Text("Edit")
+//                        }
+//                        Button(
+//                            onClick = { showDeleteConfirm = true },
+//                            modifier = Modifier
+//                                .weight(1f)
+//                                .height(48.dp),
+//                            shape = RoundedCornerShape(12.dp),
+//                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
+//                        ) {
+//                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+//                            Spacer(Modifier.size(6.dp))
+//                            Text("Delete")
+//                        }
+//                    }
+//                }
 
                 Spacer(Modifier.height(12.dp))
             }
