@@ -142,9 +142,7 @@ exports.login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        phone: user.phone || "",
-        location: user.location || ""
+        role: user.role
       }
     });
   } catch (error) {
@@ -339,7 +337,7 @@ exports.getCurrentUser = async (req, res) => {
       .select("-password -refreshTokens")
       .populate(
         "addedPlaces",
-        "name shortDescription description city state country location imageUrl averageRating visitorsCount createdAt"
+        "name shortDescription description city state country location imageUrl averageRating visitorsCount"
       )
       .populate(
         "wishlist",
@@ -364,15 +362,17 @@ exports.getCurrentUser = async (req, res) => {
 /** PUT /api/users/profile */
 exports.updateProfile = async (req, res) => {
   try {
-    const allowed = [
-      "name",
-      "phone",
-      "location",
-      "bio"
-    ];
+    const allowed = ["name"];
     const updates = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid fields to update"
+      });
     }
 
     const user = await User.findByIdAndUpdate(

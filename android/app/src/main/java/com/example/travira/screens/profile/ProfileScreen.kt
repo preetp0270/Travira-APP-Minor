@@ -115,11 +115,10 @@ fun ProfileScreen(
 ) {
     val displayName = if (isLoggedIn) (user?.name?.ifBlank { "Traveler" } ?: "Traveler") else "Guest"
     val email = if (isLoggedIn) (user?.email.orEmpty()) else ""
-    val bioFromUser = user?.bio
-    val bio = when {
-        !isLoggedIn -> "Browsing as guest. Login to save wishlist & use AI."
-        !bioFromUser.isNullOrBlank() -> bioFromUser
-        else -> "Explore smarter. Discover deeper. Travel with confidence."
+    val bio = if (!isLoggedIn) {
+        "Browsing as guest. Login to save wishlist & use AI."
+    } else {
+        "Explore smarter. Discover deeper. Travel with confidence."
     }
     val wishlistCount = user?.wishlist?.size ?: 0
     val visitedCount = user?.visitedPlaces?.size ?: 0
@@ -132,7 +131,6 @@ fun ProfileScreen(
         ?.distinct()
         ?.size
         ?: 0
-    val userLocation = user?.location?.trim().orEmpty()
     val isAdmin = (user?.role?.equals("admin", ignoreCase = true) == true) ||
             (tokenManager?.isAdmin == true)
 
@@ -342,44 +340,12 @@ fun ProfileScreen(
 
                     Spacer(Modifier.height(4.dp))
 
-                    if (userLocation.isNotBlank()) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Place,
-                                contentDescription = null,
-                                tint = textTertiary,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Text(
-                                text = userLocation,
-                                fontSize = 12.sp,
-                                color = textSecondary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                "·",
-                                fontSize = 12.sp,
-                                color = textTertiary
-                            )
-                            Text(
-                                text = roleLabel,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isAdmin) TraviraBlue else textSecondary
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = roleLabel,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (isAdmin) TraviraBlue else textSecondary
-                        )
-                    }
+                    Text(
+                        text = roleLabel,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isAdmin) TraviraBlue else textSecondary
+                    )
 
                     Spacer(Modifier.height(4.dp))
 
@@ -1036,9 +1002,7 @@ private fun ProfileScreenUserPreview() {
                 id = "1",
                 name = "Travira",
                 email = "travira.app",
-                role = "user",
-                location = "...",
-                bio = "Explore smarter. Discover deeper. Travel with confidence."
+                role = "user"
             ),
             onLoginClick = {},
             onLogoutClick = {}
@@ -1056,8 +1020,7 @@ private fun ProfileScreenAdminPreview() {
                 id = "1",
                 name = "Travira",
                 email = "Travira.app",
-                role = "admin",
-                location = "..."
+                role = "admin"
             ),
             onLoginClick = {},
             onLogoutClick = {}

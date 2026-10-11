@@ -25,48 +25,20 @@ const userSchema = new mongoose.Schema({
     required: true
   },
 
-  phone: {
+  role: {
     type: String,
-    default: ""
+    enum: ["user", "admin"],
+    default: "user"
   },
 
-  location: {
-    type: String,
-    default: ""
-  },
-
-  bio: {
-    type: String,
-    default: ""
-  },
-
-  resetPasswordToken: {
-    type: String,
-    default: null
-  },
-
-  resetPasswordExpires: {
-    type: Date,
-    default: null
-  },
-
-  /**
-   * Bumped on password reset so existing access JWTs become invalid
-   * (authMiddleware compares JWT.tv to this value).
-   */
-  tokenVersion: {
-    type: Number,
-    default: 0
-  },
-
-  addedPlaces: [
+  wishlist: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Place"
     }
   ],
 
-  wishlist: [
+  addedPlaces: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Place"
@@ -86,12 +58,6 @@ const userSchema = new mongoose.Schema({
     }
   ],
 
-  role: {
-    type: String,
-    enum: ["user", "admin"],
-    default: "user"
-  },
-
   /**
    * Stored refresh tokens for logout / session invalidation.
    * NOTE: Do NOT put MongoDB TTL `expires` on nested createdAt —
@@ -110,6 +76,25 @@ const userSchema = new mongoose.Schema({
       }
     }
   ],
+
+  /**
+   * Bumped on password reset so existing access JWTs become invalid
+   * (authMiddleware compares JWT.tv to this value).
+   */
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
+
+  resetPasswordToken: {
+    type: String,
+    default: null
+  },
+
+  resetPasswordExpires: {
+    type: Date,
+    default: null
+  },
 
   createdAt: {
     type: Date,

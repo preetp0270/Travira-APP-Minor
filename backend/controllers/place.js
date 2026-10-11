@@ -16,12 +16,11 @@ const {
 
 // ── Public feed ──────────────────────────────────────
 
-/** GET /api/place — list all places (newest first) */
+/** GET /api/place — list all places (newest first by _id) */
 exports.getPlaces = async (req, res) => {
   try {
     const places = await Place.find({})
-      .populate("addedBy", "name email")
-      .sort({ createdAt: -1 })
+      .sort({ _id: -1 })
       .lean();
 
     const visitMap = await visitorCountMap(places.map((p) => p._id));
@@ -42,9 +41,7 @@ exports.getPlaces = async (req, res) => {
 /** GET /api/place/:id — single place detail */
 exports.getPlaceById = async (req, res) => {
   try {
-    const place = await Place.findById(req.params.id)
-      .populate("addedBy", "name email")
-      .lean();
+    const place = await Place.findById(req.params.id).lean();
 
     if (!place) {
       return res.status(404).json({
@@ -66,17 +63,16 @@ exports.getPlaceById = async (req, res) => {
   }
 };
 
-// ── My places (legacy — places this user added) ──────
+// ── My places (from User.addedPlaces) ────────────────
 
 /** GET /api/place/user/my-places */
 exports.getMyPlaces = async (req, res) => {
   try {
-    const places = await Place.find({
-      addedBy: req.user.id
-    })
-      .populate("addedBy", "name email")
+    const user = await User.findById(req.user.id)
+      .populate("addedPlaces")
       .lean();
 
+    const places = (user?.addedPlaces || []).filter(Boolean);
     const visitMap = await visitorCountMap(places.map((p) => p._id));
     res.json({
       success: true,
@@ -222,7 +218,6 @@ exports.ratePlace = async (req, res) => {
     // Real average from ratings array; displayed counts include sample base
     const { averageRating: realAvg } = ratingStats(place.ratings);
     if (realAvg > 0) place.averageRating = realAvg;
-    // Sample/AI places may lack required addedBy — only validate changed paths
     await place.save({ validateModifiedOnly: true });
 
     const visitMap = await visitorCountMap([place._id]);

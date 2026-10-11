@@ -8,9 +8,6 @@ data class User(
     val name: String = "",
     val email: String = "",
     val role: String = "user",
-    val phone: String? = null,
-    val location: String? = null,
-    val bio: String? = null,
     val wishlist: List<Place> = emptyList(),
     val addedPlaces: List<Place> = emptyList(),
     val visitedPlaces: List<VisitedPlaceEntry> = emptyList()

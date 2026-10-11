@@ -64,9 +64,7 @@ data class AuthUserDto(
     val _id: String? = null,
     val name: String = "",
     val email: String = "",
-    val role: String = "user",
-    val phone: String? = null,
-    val location: String? = null
+    val role: String = "user"
 )
 
 data class LoginResponse(
@@ -96,10 +94,7 @@ data class UserProfileResponse(
 )
 
 data class UpdateProfileRequest(
-    val name: String? = null,
-    val phone: String? = null,
-    val location: String? = null,
-    val bio: String? = null
+    val name: String? = null
 )
 
 data class ForgotPasswordRequest(
@@ -115,9 +110,6 @@ data class ResetPasswordRequest(
 data class AdminUpdateUserRequest(
     val name: String? = null,
     val email: String? = null,
-    val phone: String? = null,
-    val location: String? = null,
-    val bio: String? = null,
     val password: String? = null,
     val role: String? = null
 )

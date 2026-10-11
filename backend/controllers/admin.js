@@ -31,8 +31,7 @@ const PLACE_UPDATE_FIELDS = [
 exports.getAllPlaces = async (req, res) => {
   try {
     const places = await Place.find({})
-      .populate("addedBy", "name email phone location")
-      .sort({ createdAt: -1 })
+      .sort({ _id: -1 })
       .lean();
 
     const visitMap = await visitorCountMap(places.map((p) => p._id));
@@ -52,7 +51,6 @@ exports.getAllPlaces = async (req, res) => {
 exports.getPlaceAdminDetail = async (req, res) => {
   try {
     const place = await Place.findById(req.params.id)
-      .populate("addedBy", "name email phone location role")
       .populate("ratings.user", "name email");
 
     if (!place) {
@@ -125,7 +123,7 @@ exports.updateAnyPlace = async (req, res) => {
       req.params.id,
       { $set: updates },
       { new: true }
-    ).populate("addedBy", "name email");
+    );
 
     res.json({ success: true, message: "Place updated", place });
   } catch (error) {
@@ -172,7 +170,7 @@ exports.adminAddPlace = async (req, res) => {
       });
     }
 
-    const payload = { name, addedBy: req.user.id };
+    const payload = { name };
     for (const key of PLACE_UPDATE_FIELDS) {
       if (key === "name") continue;
       if (req.body[key] !== undefined) payload[key] = req.body[key];
@@ -205,12 +203,7 @@ exports.adminAddPlace = async (req, res) => {
       $push: { addedPlaces: place._id }
     });
 
-    const populated = await Place.findById(place._id).populate(
-      "addedBy",
-      "name email"
-    );
-
-    res.json({ success: true, message: "Place added", place: populated });
+    res.json({ success: true, message: "Place added", place });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -261,8 +254,6 @@ exports.adminCreateUser = async (req, res) => {
     const name = String(req.body?.name || "").trim();
     const email = String(req.body?.email || "").trim().toLowerCase();
     const password = req.body?.password;
-    const phone = req.body?.phone || "";
-    const location = req.body?.location || "";
     const role = req.body?.role;
 
     if (!name || !email || !password) {
@@ -288,8 +279,6 @@ exports.adminCreateUser = async (req, res) => {
       name,
       email,
       password: hashed,
-      phone,
-      location,
       role: role === "admin" ? "admin" : "user"
     });
 
@@ -315,7 +304,7 @@ exports.adminUpdateUser = async (req, res) => {
     if (!target) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    const { name, email, phone, location, bio, password, role } = req.body || {};
+    const { name, email, password, role } = req.body || {};
     if (name !== undefined) target.name = String(name).trim();
     if (email !== undefined) {
       const normalized = String(email).trim().toLowerCase();
@@ -331,9 +320,6 @@ exports.adminUpdateUser = async (req, res) => {
       }
       target.email = normalized;
     }
-    if (phone !== undefined) target.phone = phone;
-    if (location !== undefined) target.location = location;
-    if (bio !== undefined) target.bio = bio;
     if (password && String(password).length >= 6) {
       target.password = await bcrypt.hash(String(password), 10);
       // Invalidate all sessions after admin password change
@@ -408,7 +394,7 @@ function expectedMongoGatePassword() {
 
 /**
  * POST /api/admin-bootstrap/register  (public — gated by MongoDB password only)
- * Body: { mongoPassword, name, email, password, phone?, location? }
+ * Body: { mongoPassword, name, email, password }
  * Always creates role: "admin"
  */
 exports.bootstrapRegisterAdmin = async (req, res) => {
@@ -417,8 +403,6 @@ exports.bootstrapRegisterAdmin = async (req, res) => {
     const name = String(req.body?.name || "").trim();
     const email = String(req.body?.email || "").trim().toLowerCase();
     const password = req.body?.password;
-    const phone = String(req.body?.phone || "").trim();
-    const location = String(req.body?.location || "").trim();
     const role = "admin";
 
     if (!mongoPassword) {
@@ -470,8 +454,6 @@ exports.bootstrapRegisterAdmin = async (req, res) => {
       name,
       email,
       password: hashed,
-      phone,
-      location,
       role
     });
 

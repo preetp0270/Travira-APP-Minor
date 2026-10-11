@@ -1,8 +1,7 @@
 package com.example.travira.model
 
 /**
- * Matches the live API response from GET /api/places
- * (raw JSON with optional populated addedBy).
+ * Matches the live API response from GET /api/places.
  */
 data class Place(
     val _id: String = "",
@@ -18,10 +17,7 @@ data class Place(
     val rating: Double = 0.0,
     val averageRating: Double = 0.0,
     val visitorsCount: Int = 0,
-    val ratingsCount: Int = 0,
-    val createdAt: String? = null,
-    /** Populated by backend as { _id, name, email } or raw ObjectId string */
-    val addedBy: AddedByUser? = null
+    val ratingsCount: Int = 0
 ) {
     /**
      * Prefer averageRating from real reviews when present;
@@ -44,19 +40,4 @@ data class Place(
         get() = country?.takeIf { it.isNotBlank() }
             ?: state?.takeIf { it.isNotBlank() }
             ?: "—"
-
-    val addedByName: String
-        get() = addedBy?.name?.takeIf { it.isNotBlank() } ?: "Traveler"
-
-    val addedById: String
-        get() = addedBy?.idOrEmpty().orEmpty()
-}
-
-data class AddedByUser(
-    val _id: String? = null,
-    val id: String? = null,
-    val name: String? = null,
-    val email: String? = null
-) {
-    fun idOrEmpty(): String = (_id ?: id).orEmpty()
 }

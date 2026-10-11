@@ -48,13 +48,6 @@ const placeSchema = new mongoose.Schema({
     default: ""
   },
 
-  /** Admin (or user) who created this place (optional for AI/sample seed data) */
-  addedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: false
-  },
-
   ratings: [
     {
       user: {
@@ -107,11 +100,6 @@ const placeSchema = new mongoose.Schema({
   visitorsCount: {
     type: Number,
     default: 0
-  },
-
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
 });
 
