@@ -4,7 +4,7 @@ Travira is an AI-powered **Android travel app** with a **Node.js + MongoDB backe
 
 **Live backend:** [https://travira-app-minor.onrender.com](https://travira-app-minor.onrender.com)
 
-**Download Semi-Final Touch:** [https://github.com/preetp0270/Travira-APP-Minor/actions/runs/38134625241/artifacts/11700556738](https://github.com/preetp0270/Travira-APP-Minor/actions/runs/38134625241/artifacts/11700556738)
+**Download Semi-Final Touch:** [https://github.com/preetp0270/Travira-APP-Minor/actions/runs/38177366824/artifacts/11715989480](https://github.com/preetp0270/Travira-APP-Minor/actions/runs/38177366824/artifacts/11715989480)
 
 ---
 
